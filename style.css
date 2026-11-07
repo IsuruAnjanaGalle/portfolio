@@ -1,0 +1,533 @@
+:root {
+  --bg: #030404;            /* matches the frame edges */
+  --text: #f2f2f0;
+  --muted: #a3a6a6;
+  --accent: #d9e4e4;
+  --glass: rgba(10, 12, 12, 0.55);
+  --border: rgba(255, 255, 255, 0.12);
+  --gutter: clamp(16px, 4vw, 56px);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+/* No text selection or image dragging anywhere on the page */
+body {
+  -webkit-user-select: none; user-select: none;
+  -webkit-touch-callout: none;          /* iOS long-press copy menu */
+}
+img, video, svg { -webkit-user-drag: none; user-drag: none; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Inter", system-ui, sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* ---------- Background canvas ---------- */
+#bg {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100lvh;           /* stable on mobile when URL bar hides */
+  z-index: -1;
+  display: block;
+  background: var(--bg);
+}
+
+#fx {
+  position: fixed; inset: 0; z-index: -1;
+  pointer-events: none; display: block;
+}
+
+/* ---------- Loader ---------- */
+#loader {
+  position: fixed; inset: 0; z-index: 100;
+  display: grid; place-content: center; gap: 14px;
+  background: var(--bg);
+  transition: opacity .6s ease, visibility .6s;
+}
+#loader.done { opacity: 0; visibility: hidden; }
+#loader-text { font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); text-align: center;
+               font-variant-numeric: tabular-nums; }
+
+/* Battery-charger schematic loader */
+.charger { width: min(460px, 92vw); height: auto; overflow: visible; }
+.charger text { font-family: ui-monospace, Consolas, monospace; }
+.charger .sch { fill: none; stroke: #cfd8dc; stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
+.charger .lbl { fill: #8fa3ad; font-size: 9px; }
+.charger .term { fill: var(--muted); font-size: 12px; }
+.charger .dot { fill: #cfd8dc; }
+.charger .diode path { fill: var(--bg); stroke: #cfd8dc; stroke-width: 1.6; stroke-linejoin: round; }
+.charger .wire { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.charger .wire.pos { stroke: #e8ecec; }
+.charger .wire.neg { stroke: #7a8285; }
+.charger .led-sym { fill: #f2f2f0; stroke: #f2f2f0; stroke-width: 1.2; stroke-linejoin: round;
+                    filter: drop-shadow(0 0 4px rgba(255,255,255,.9)); animation: blink 1s steps(2, start) infinite; }
+.charger .arrows { stroke: #cfd8dc; }
+.charger .pulse {
+  fill: none; stroke: #ffffff; stroke-width: 2.4; stroke-linecap: round;
+  stroke-dasharray: 5 30; filter: drop-shadow(0 0 4px rgba(255,255,255,.9));
+  animation: charge-flow .8s linear infinite;
+}
+.charger .cell { fill: rgba(255,255,255,.03); stroke: #d8dcdc; stroke-width: 2.2; }
+.charger .cap  { fill: #d8dcdc; }
+#cell-fill { fill: #e8ecec; transition: width .25s ease; }
+.charger .bolt { fill: var(--bg); stroke: #e8ecec; stroke-width: 1.2;
+                 animation: bolt-pulse 1.2s ease-in-out infinite; }
+
+/* Loaded: LED stays on, current stops */
+#loader.full .led-sym { filter: drop-shadow(0 0 6px #fff); animation: none; }
+#loader.full .pulse { animation: none; opacity: 0; }
+#loader.full .bolt { animation: none; opacity: 1; }
+
+@keyframes blink { to { opacity: .25; } }
+@keyframes charge-flow { to { stroke-dashoffset: -35; } }
+@keyframes bolt-pulse { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .charger .pulse, .charger .led-sym, .charger .bolt { animation: none; }
+}
+
+/* ---------- Nav ---------- */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 18px var(--gutter);
+  /* Tinted glass: see-through dark tint with a blur */
+  background: rgba(3, 4, 4, .35);
+  backdrop-filter: blur(12px) saturate(140%); -webkit-backdrop-filter: blur(12px) saturate(140%);
+  border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
+.logo { font-family: "Space Grotesk", sans-serif; font-weight: 700; font-size: 22px; color: var(--text); text-decoration: none; }
+.logo span { color: var(--muted); }
+.nav nav { display: flex; gap: clamp(4px, 1.2vw, 14px); }
+/* Nav links: pill shape so the liquid fill (shared with tags/buttons) has room */
+.nav nav a {
+  color: var(--muted); text-decoration: none; font-size: 14px;
+  padding: 6px 14px; border-radius: 999px;
+  position: relative; overflow: hidden; isolation: isolate;
+  transition: color .2s;
+}
+/* White text so the difference-blend fill turns it pure black */
+.nav nav a:hover, .nav nav a:focus-visible { color: var(--text); }
+
+/* ---------- Sections ----------
+   Desktop: text sits left & right, the person stays clear in the middle. */
+.panel {
+  min-height: 100vh;
+  min-height: 100svh;
+  display: grid;
+  grid-template-columns: 1fr minmax(320px, 36vw) 1fr;
+  align-items: center;
+  padding: 96px var(--gutter);
+  gap: 24px;
+}
+.side { max-width: 380px; }
+.side.left  { grid-column: 1; justify-self: start; }
+.side.right { grid-column: 3; justify-self: end; }
+
+.eyebrow { font-size: 12px; letter-spacing: .25em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+h1, h2 { font-family: "Space Grotesk", sans-serif; line-height: 1.05; letter-spacing: -.02em; }
+
+/* Outline + shadow on every topic and sub-topic so they stay crisp over
+   bright video frames. paint-order puts the stroke behind the fill, so the
+   outline thickens the edge instead of eating into the letters. */
+h1, h2, h3, .eyebrow, .t-place, .post-name {
+  paint-order: stroke fill;
+  -webkit-text-stroke: var(--outline, 1.5px) rgba(0, 0, 0, .85);
+  text-shadow:
+    0 2px 3px rgba(0, 0, 0, .9),
+    0 6px 22px rgba(0, 0, 0, .7);
+}
+h1 { --outline: 3px; }
+h2 { --outline: 2.5px; }
+h3, .t-place { --outline: 1.5px; }
+.eyebrow, .post-name { --outline: 1.25px; }
+
+/* Section titles: liquid letters.
+   Each letter (span.ch, split by main.js) is filled with a two-tone image
+   clipped to the glyph: solid white on top, see-through black below, with a
+   wavy surface between them. On hover the image slides so the dark liquid
+   rises up through each letter, rippling left to right one letter at a time,
+   while a thin white outline appears. */
+h1, section h2 {
+  cursor: default;
+  -webkit-text-stroke: 0; text-shadow: none;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .85)) drop-shadow(0 6px 18px rgba(0, 0, 0, .55));
+  transition: filter .5s ease;
+}
+h1 .word, section h2 .word { display: inline-block; white-space: nowrap; }
+h1 .ch, section h2 .ch {
+  --liquid: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 200' preserveAspectRatio='none'%3E%3Crect width='40' height='110' fill='%23f2f2f0'/%3E%3Cpath d='M0 100Q10 91 20 100T40 100V200H0Z' fill='%23000' fill-opacity='.38'/%3E%3C/svg%3E");
+  display: inline-block; white-space: pre;
+  color: transparent; -webkit-text-fill-color: transparent;
+  background: var(--liquid) 0 0 / .9em 200% repeat-x;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-stroke: 1px rgba(0, 0, 0, .35);
+  text-shadow: none;
+  transition: background-position-y .75s cubic-bezier(.55, .05, .3, 1),
+              -webkit-text-stroke-color .45s ease;
+  transition-delay: calc(var(--i) * 32ms);
+  animation: liquid-x 1.4s linear infinite;
+}
+h1:hover .ch, section h2:hover .ch {
+  background-position-y: 100%;
+  -webkit-text-stroke-color: rgba(255, 255, 255, .95);
+}
+h1:hover, section h2:hover {
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, .25)) drop-shadow(0 4px 14px rgba(0, 0, 0, .6));
+}
+@keyframes liquid-x { to { background-position-x: .9em; } }
+@media (prefers-reduced-motion: reduce) {
+  h1 .ch, section h2 .ch { animation: none; transition-delay: 0s; }
+}
+section { scroll-margin-top: 0; }
+h1 { font-size: clamp(44px, 6vw, 96px); }
+h2 { font-size: clamp(32px, 4vw, 60px); }
+p  { color: #d4d6d5; }
+.lead { font-size: clamp(17px, 1.5vw, 21px); }
+.hint { margin-top: 16px; font-size: 13px; color: var(--muted); }
+.hint a { color: inherit; text-decoration: none; transition: color .2s; }
+.hint a:hover { color: var(--text); }
+
+.projects { list-style: none; display: grid; gap: 10px; }
+.projects a {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 16px;
+  padding: 14px 16px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--glass); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  color: var(--text); text-decoration: none; transition: border-color .2s, transform .2s;
+}
+.projects a:hover { border-color: rgba(255,255,255,.35); transform: translateX(-4px); }
+.projects span { font-size: 13px; color: var(--muted); white-space: nowrap; }
+
+.tags { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; }
+.tags li {
+  padding: 6px 14px; border: 1px solid var(--border); border-radius: 999px;
+  font-size: 14px; background: rgba(10, 12, 12, .28); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+  color: var(--text); cursor: default; text-shadow: 0 1px 6px rgba(0, 0, 0, .8);
+  position: relative; overflow: hidden; isolation: isolate;
+  transition: border-color .3s ease, transform .3s ease;
+}
+/* Hover (or tap): a liquid fill flows in from the left with a wavy front.
+   mix-blend-mode: difference inverts everything it covers, so the white
+   text turns black exactly where the fill has reached. */
+.tags li::before, .btn::before, .nav nav a::before {
+  --wave: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 20'%3E%3Cpath d='M0 0H6Q12 5 6 10Q0 15 6 20H0Z'/%3E%3C/svg%3E");
+  content: ""; position: absolute; top: 0; bottom: 0; left: 0;
+  width: calc(100% + 12px);
+  background: var(--text);
+  mix-blend-mode: difference;
+  pointer-events: none;
+  -webkit-mask: linear-gradient(#000 0 0) left / calc(100% - 12px) 100% no-repeat,
+                var(--wave) right top / 12px 20px repeat-y;
+          mask: linear-gradient(#000 0 0) left / calc(100% - 12px) 100% no-repeat,
+                var(--wave) right top / 12px 20px repeat-y;
+  transform: translateX(-100%);
+  transition: transform .6s cubic-bezier(.65, .05, .35, 1);
+  animation: slosh .8s linear infinite;
+}
+.tags li:hover, .tags li:active { border-color: var(--text); transform: translateY(-2px); }
+.tags li:hover::before, .tags li:active::before,
+.btn:hover::before, .btn:active::before, .btn:focus-visible::before,
+.nav nav a:hover::before, .nav nav a:active::before, .nav nav a:focus-visible::before { transform: translateX(0); }
+@keyframes slosh {
+  to { -webkit-mask-position: left, right 0 top 20px; mask-position: left, right 0 top 20px; }
+}
+@media (prefers-reduced-motion: reduce) { .tags li::before, .btn::before, .nav nav a::before { animation: none; } }
+
+/* Skills wired together like a circuit: SOURCE → every tag in series → GND */
+.tag-circuit { position: relative; }
+.tag-circuit .tags { position: relative; z-index: 1; gap: 20px 26px; padding: 6px 30px; }
+/* Give the wired tags room to sit side by side */
+@media (min-width: 900px) {
+  #skills { grid-template-columns: 1fr minmax(240px, 24vw) 1.25fr; }
+  #skills .side.right { max-width: 520px; width: 100%; }
+}
+.tag-wires {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  overflow: visible; pointer-events: none; z-index: 0;
+  --c: 150, 210, 255;
+}
+.tag-wires .wire {
+  fill: none; stroke: rgba(var(--c), .7); stroke-width: 3;
+  stroke-linecap: round; stroke-linejoin: round;
+  transition: stroke .3s ease, filter .3s ease;
+}
+.tag-wires .wire.hot { stroke: rgb(var(--c)); filter: drop-shadow(0 0 4px rgba(var(--c), .9)); }
+.tag-wires .pulse {
+  fill: none; stroke: rgba(235, 248, 255, .95); stroke-width: 3.5; stroke-linecap: round;
+  stroke-dasharray: 5 55; filter: drop-shadow(0 0 3px rgba(var(--c), 1));
+  animation: flow 1.6s linear infinite;
+}
+.tag-wires .pad { fill: rgb(var(--c)); }
+.tag-wires .sym { fill: none; stroke: rgba(var(--c), .8); stroke-width: 2.2; stroke-linecap: round; }
+@keyframes flow { to { stroke-dashoffset: -60; } }
+@media (prefers-reduced-motion: reduce) { .tag-wires .pulse { animation: none; display: none; } }
+
+/* Buttons use the same liquid fill: the solid button fills to black with
+   white text, the outline button fills to white with black text. */
+.btn {
+  display: inline-block; margin-top: 18px; padding: 12px 22px;
+  border-radius: 999px; background: var(--text); color: var(--bg);
+  border: 1px solid var(--text);
+  font-weight: 600; text-decoration: none; transition: transform .2s;
+  position: relative; overflow: hidden; isolation: isolate;
+}
+.btn:hover { transform: translateY(-2px); }
+
+.btn.sm { margin-top: 14px; padding: 8px 16px; font-size: 13px; }
+
+/* ---------- Wide panels (about, projects): content columns hug the edges ---------- */
+.panel.wide { grid-template-columns: 1fr minmax(300px, 30vw) 1fr; }
+.panel.wide .side { max-width: 460px; width: 100%; }
+.about-text { margin-top: 16px; font-size: 15px; text-align: justify; hyphens: auto; -webkit-hyphens: auto; }
+
+.card {
+  padding: 22px; border-radius: 16px; border: 1px solid var(--border);
+  background: var(--glass); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+h3 { font-family: "Space Grotesk", sans-serif; font-size: 20px; line-height: 1.2; }
+
+/* Education timeline */
+.card.edu { padding: 0; border: 0; border-radius: 0; background: none;
+            backdrop-filter: none; -webkit-backdrop-filter: none;
+            text-shadow: 0 0 2px #000, 0 0 6px rgba(0,0,0,.9), 0 1px 14px rgba(0,0,0,.85); }
+@media (max-width: 899px) {
+  .card.edu .t-detail { color: #e2e5e4; }
+}
+.edu h3 { margin-bottom: 18px; }
+/* Circuit schematic: each milestone is a component on one series wire */
+.circuit {
+  --wire: rgba(150, 210, 255, .55);
+  --glow: 150, 210, 255;
+  --sym: 33.6px;          /* symbol height (24×28 viewBox at 1.2×) */
+  --cycle: 5s;            /* time for the current to travel the circuit */
+  list-style: none; position: relative; padding-left: 44px;
+}
+.circuit li { position: relative; padding-bottom: 18px; min-height: var(--sym); }
+/* Component symbol sits on the wire */
+.circuit .sym {
+  position: absolute; left: -44px; top: 0; width: 28.8px; height: var(--sym);
+  fill: none; stroke: var(--wire); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round;
+  overflow: visible;
+  animation: energise var(--cycle) linear infinite;
+  animation-delay: calc(var(--i, 0) * var(--cycle) / 6);
+}
+/* Wire from this component down to the next one, with flowing current */
+.circuit li::after {
+  content: ""; position: absolute; left: -30.5px; top: var(--sym); bottom: 0; width: 1.8px;
+  background:
+    repeating-linear-gradient(to bottom, rgba(var(--glow), .95) 0 4px, transparent 4px 14px),
+    var(--wire);
+  background-size: 100% 14px, 100% 100%;
+  animation: current .7s linear infinite;
+}
+.circuit li:last-child::after { display: none; }
+/* Small solder junction where the branch meets the wire */
+.circuit li:not(.term)::before {
+  content: ""; position: absolute; left: -20px; top: 16px; width: 14px; height: 1.5px;
+  background: linear-gradient(to right, var(--wire), transparent);
+}
+
+/* Reference designators (R1, C1 …) like on a schematic */
+.ref {
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 11px; font-weight: 400; letter-spacing: .06em;
+  color: rgb(var(--glow)); margin-right: 8px;
+  padding: 1px 5px; border: 1px solid rgba(var(--glow), .35); border-radius: 4px;
+  vertical-align: 1px;
+}
+.term { padding-bottom: 0 !important; height: var(--sym); }
+.term.vcc .ref { position: absolute; left: -10px; top: 4px; border: 0; padding: 0; }
+.term.gnd { height: 22px; }
+.term .sym { animation: none; }
+
+/* LED (current milestone) glows */
+.circuit .led .led-body { fill: rgba(var(--glow), .9); stroke: none; animation: led 1.6s ease-in-out infinite; }
+.circuit .led { stroke: rgb(var(--glow)); filter: drop-shadow(0 0 6px rgba(var(--glow), .9)); animation: none; }
+.circuit .now .t-place { color: #fff; }
+
+@keyframes current { to { background-position: 0 14px, 0 0; } }
+@keyframes energise {
+  0%, 12%, 100% { stroke: var(--wire); filter: none; }
+  4% { stroke: #eaf6ff; filter: drop-shadow(0 0 5px rgba(var(--glow), 1)); }
+}
+@keyframes led { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .circuit .sym, .circuit li::after, .circuit .led .led-body { animation: none; }
+}
+
+.t-place { font-weight: 600; color: var(--text); font-size: 15px; }
+.t-detail { font-size: 14px; color: var(--muted); }
+.t-detail strong { color: var(--text); font-weight: 600; }
+
+/* Projects: three cards each side, person stays visible in the middle */
+.projects-panel { grid-template-rows: auto 1fr; row-gap: 28px; }
+.section-head { grid-column: 1 / -1; text-align: center; }
+.sub { font-size: 13px; color: var(--muted); margin-top: 8px; }
+.proj-col { display: grid; gap: 14px; align-self: center; }
+
+.flip { perspective: 1000px; height: 168px; outline: none; cursor: pointer; }
+.flip-inner {
+  position: relative; width: 100%; height: 100%;
+  transform-style: preserve-3d; transition: transform .7s cubic-bezier(.2,.7,.2,1);
+}
+@media (hover: hover) {
+  .flip:hover .flip-inner { transform: rotateY(180deg); }
+}
+.flip:focus-visible .flip-inner,
+.flip:has(a:focus-visible) .flip-inner,
+.flip.flipped .flip-inner { transform: rotateY(180deg); }
+.face {
+  position: absolute; inset: 0; padding: 18px 20px;
+  border-radius: 14px; border: 1px solid var(--border);
+  background: var(--glass); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  display: flex; flex-direction: column; justify-content: center;
+}
+.face.front p { font-size: 14px; color: var(--muted); margin-top: 6px; }
+.face.front .tag {
+  align-self: flex-start; font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 8px;
+}
+.face.back { transform: rotateY(180deg); background: rgba(22, 26, 26, .85); align-items: flex-start; }
+.face.back p { font-size: 13.5px; line-height: 1.5; }
+.flip:hover .face, .flip.flipped .face { border-color: rgba(255,255,255,.3); }
+
+/* LinkedIn posts */
+.posts-panel { grid-template-rows: auto 1fr; row-gap: 28px; }
+.sub.link { display: inline-block; color: var(--accent); text-decoration: none; border-bottom: 1px solid var(--border); }
+.sub.link:hover { border-color: var(--accent); }
+/* Post cards in the site theme: see-through black, white text */
+.post {
+  width: 100%; max-width: 504px; border-radius: 14px; overflow: hidden;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, .38);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, .7);
+  color: var(--text);
+}
+.post-head { display: flex; align-items: center; gap: 12px; padding: 14px 16px 10px; }
+.avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border); }
+.post-name { font-weight: 600; font-size: 14px; color: var(--text); line-height: 1.3; }
+.post-meta { font-size: 12px; color: var(--muted); line-height: 1.3; }
+.li-logo { width: 20px; height: 20px; margin-left: auto; fill: var(--text); opacity: .85; }
+
+.post-text { padding: 0 16px; font-size: 13.5px; line-height: 1.55; color: #e6e8e7; }
+.post-text p { color: inherit; margin-bottom: 10px; }
+.post-text strong { color: #fff; }
+.post-text a { color: var(--accent); }
+.post-text .hashtags { color: rgb(150, 210, 255); }
+/* Collapsed: first few lines with a fade */
+.post-text.clamped { max-height: 7.2em; overflow: hidden;
+  -webkit-mask-image: linear-gradient(#000 55%, transparent); mask-image: linear-gradient(#000 55%, transparent); }
+.see-more {
+  display: block; margin: 0 16px 12px auto; padding: 0; border: 0; background: none;
+  color: var(--muted); font: inherit; font-size: 13px; cursor: pointer;
+}
+.see-more:hover { color: var(--text); }
+
+.post-video { display: block; width: 100%; aspect-ratio: 16 / 9; background: #000; object-fit: contain; }
+.post-video.portrait { aspect-ratio: 9 / 16; max-height: 520px; }
+
+.post-foot {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 16px; font-size: 13px; border-top: 1px solid var(--border);
+}
+.post-foot .reacts { color: var(--muted); }
+.post-foot a { color: var(--text); text-decoration: none; }
+.post-foot a:hover { text-decoration: underline; }
+
+.btn-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+.btn.ghost:hover { border-color: var(--text); }
+
+footer { text-align: center; padding: 32px 16px; font-size: 13px; color: var(--muted); }
+
+/* ---------- Reveal on scroll ---------- */
+.reveal { opacity: 0; transform: translateY(24px); transition: opacity .8s ease, transform .8s ease; }
+.reveal.in { opacity: 1; transform: none; }
+
+/* ---------- Tablet / mobile ----------
+   The frame is shrunk to fit the person (never cropped), so it occupies the
+   middle band of the screen. Titles go above it, details below it. */
+@media (max-width: 899px) {
+  .panel {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto;
+    align-items: stretch;
+    padding: 84px 16px 32px;
+    gap: 0;
+  }
+  .side { max-width: none; width: 100%; }
+  .side.left  { grid-column: 1; grid-row: 1; text-align: center; justify-self: stretch; }
+  .side.right { grid-column: 1; grid-row: 3; justify-self: stretch; align-self: end; text-align: center;
+                padding: 18px; border-radius: 14px; background: var(--glass);
+                backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border: 1px solid var(--border); }
+  .projects a { text-align: left; }
+  .tags { justify-content: center; }
+
+  /* Mobile cards: a little more see-through (was .55 dark, 10px blur) */
+  :root { --glass: rgba(10, 12, 12, .36); }
+  .face { backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  .face.back { background: rgba(22, 26, 26, .6); }
+  .side.right, #about .about-text, .face { text-shadow: 0 1px 4px rgba(0, 0, 0, .75); }
+
+  /* Skills: no panel behind the wired tags */
+  #skills .side.right { padding: 0; background: none; border: 0;
+                        backdrop-filter: none; -webkit-backdrop-filter: none; }
+
+  /* Hero: split the greeting to the edges so nothing sits on the face */
+  /* "HELLO, I'M" and the name share one row, lined up on the baseline of
+     "Isuru": greeting on the left, name on the right, face left clear */
+  .hero .side.left {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+    text-align: left;
+    padding: 0 7vw;              /* nudge both in toward the centre */
+  }
+  .hero .side.left .eyebrow { margin: 0; text-align: left; white-space: nowrap; }
+  .hero .side.left h1 { text-align: right; }
+
+  /* Long-content panels just stack */
+  .panel.wide { grid-template-columns: 1fr; grid-template-rows: none; gap: 18px; }
+  .panel.wide .side { grid-row: auto; max-width: 560px; justify-self: center; }
+  .panel.wide .side.left { text-align: left; }
+  .panel.wide .side.left h2, .panel.wide .side.left .eyebrow { text-align: center; }
+  .panel.wide .side.right { padding: 0; background: none; border: 0; backdrop-filter: none; -webkit-backdrop-filter: none; text-align: left; }
+  /* Only the paragraph is a card; the "About me" heading sits outside it
+     like the other section headings */
+  #about .about-text { padding: 18px; border-radius: 14px; background: var(--glass);
+                       backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border: 1px solid var(--border); }
+  .section-head { grid-column: 1; }
+  .proj-col { gap: 12px; }
+  /* Project cards: 70% wide, zig-zag left / right down the page.
+     Left column holds cards 1–3, right column 4–6, so the right column's
+     pattern is flipped to keep the alternation going (L R L | R L R). */
+  .flip { height: 200px; width: 70%; }
+  .proj-col.left  .flip:nth-child(odd),
+  .proj-col.right .flip:nth-child(even) { justify-self: start; }
+  .proj-col.left  .flip:nth-child(even),
+  .proj-col.right .flip:nth-child(odd)  { justify-self: end; }
+  .face { padding: 14px 16px; }
+  .face.front p { font-size: 13px; }
+  .face.back p { font-size: 12.5px; }
+  .post { margin: 0 auto; }
+  .btn-row { justify-content: center; }
+  .nav nav a { font-size: 13px; padding: 5px 10px; }
+  .nav { padding-top: 14px; padding-bottom: 14px; }
+}
+
+@media (max-width: 420px) {
+  .nav nav { gap: 2px; }
+  .nav nav a { font-size: 12px; padding: 5px 6px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .reveal { transition: none; opacity: 1; transform: none; }
+}

@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Isuru Anjana — Portfolio</title>
+  <meta name="description" content="Isuru Anjana — Electrical Engineering undergraduate at the University of Moratuwa.">
+  <meta name="theme-color" content="#030404">
+  <link rel="preload" as="image" href="frames/lg/0001.webp" media="(min-width: 700px)">
+  <link rel="preload" as="image" href="frames/sm/0001.webp" media="(max-width: 699px)">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=23">
+</head>
+<body>
+  <!-- Fixed scroll-driven background -->
+  <canvas id="bg" aria-hidden="true"></canvas>
+  <!-- Electric effects: circuit traces, arcs, sparks -->
+  <canvas id="fx" aria-hidden="true"></canvas>
+
+  <div id="loader" role="status" aria-live="polite">
+    <!-- Loader: a classic battery-charger schematic.
+         AC mains → step-down transformer T1 → bridge rectifier D1–D4 →
+         smoothing capacitor C1 → current-limit resistor R1 → blocking
+         diode D5 → battery, with an LED charge indicator.
+         The battery fill shows how many background frames have loaded. -->
+    <svg class="charger" viewBox="0 0 460 142" aria-hidden="true">
+      <!-- AC source -->
+      <circle class="sch" cx="20" cy="70" r="12"/>
+      <path class="sch" d="M13 70q3.5 -7 7 0t7 0"/>
+      <path class="sch" d="M20 58V30H60V40M20 82V110H60V100"/>
+      <text class="lbl" x="8" y="128">AC</text>
+
+      <!-- Transformer T1: primary, iron core, secondary -->
+      <path class="sch" d="M60 40a7.5 7.5 0 0 1 0 15a7.5 7.5 0 0 1 0 15a7.5 7.5 0 0 1 0 15a7.5 7.5 0 0 1 0 15"/>
+      <path class="sch" d="M70 38V102M74 38V102"/>
+      <path class="sch" d="M84 40a7.5 7.5 0 0 0 0 15a7.5 7.5 0 0 0 0 15a7.5 7.5 0 0 0 0 15a7.5 7.5 0 0 0 0 15"/>
+      <text class="lbl" x="64" y="30">T1</text>
+
+      <!-- Secondary to the bridge -->
+      <path class="sch" d="M84 40H160M84 100H160"/>
+
+      <!-- Bridge rectifier D1–D4 -->
+      <path class="sch" d="M160 40L190 70L160 100L130 70Z"/>
+      <g class="diode" transform="translate(175 55) rotate(45)"><path d="M-5 -5L5 0L-5 5Z"/><path d="M5 -5V5"/></g>
+      <g class="diode" transform="translate(175 85) rotate(-45)"><path d="M-5 -5L5 0L-5 5Z"/><path d="M5 -5V5"/></g>
+      <g class="diode" transform="translate(145 55) rotate(-45)"><path d="M-5 -5L5 0L-5 5Z"/><path d="M5 -5V5"/></g>
+      <g class="diode" transform="translate(145 85) rotate(45)"><path d="M-5 -5L5 0L-5 5Z"/><path d="M5 -5V5"/></g>
+      <text class="lbl" x="170" y="32">D1–D4</text>
+
+      <!-- DC + rail with C1, R1, D5 -->
+      <path class="wire pos" d="M190 70H250"/>
+      <path class="wire pos" d="M250 70l3 -6l6 12l6 -12l6 12l6 -12l3 6"/>
+      <path class="wire pos" d="M286 70H296M308 70H330V30H456V70H450"/>
+      <g class="diode d5"><path d="M296 63L308 70L296 77Z"/><path d="M308 63V77"/></g>
+      <text class="lbl" x="260" y="58">R1</text>
+      <text class="lbl" x="295" y="58">D5</text>
+
+      <!-- Smoothing capacitor C1 (electrolytic) -->
+      <path class="sch" d="M225 70V88M215 88H235M215 96q10 -5 20 0M225 94V122"/>
+      <text class="lbl" x="208" y="85">+</text>
+      <text class="lbl" x="239" y="100">C1</text>
+
+      <!-- LED charge indicator -->
+      <path class="sch" d="M320 70V84M320 95V122"/>
+      <path class="led-sym" d="M313 84H327L320 95Z"/>
+      <path class="sch" d="M313 95H327"/>
+      <path class="sch arrows" d="M328 86l6 -4m-2.5 0h2.5v2.5M329 91l6 -4m-2.5 0h2.5v2.5"/>
+
+      <!-- Return (−) rail, hopping over the secondary wire -->
+      <path class="wire neg" d="M130 70H118V95a5 5 0 0 0 0 10V122H345V70H350"/>
+      <path class="sch" d="M280 122V128M272 128H288M275 132H285M278 136H282"/>
+
+      <!-- Junction dots -->
+      <circle class="dot" cx="225" cy="70" r="2.4"/><circle class="dot" cx="320" cy="70" r="2.4"/>
+      <circle class="dot" cx="225" cy="122" r="2.4"/><circle class="dot" cx="320" cy="122" r="2.4"/>
+      <circle class="dot" cx="280" cy="122" r="2.4"/>
+
+      <!-- Current flow -->
+      <path class="pulse" d="M84 40H160"/>
+      <path class="pulse" d="M190 70H330V30H456V70H450"/>
+
+      <!-- 18650 cell being charged -->
+      <rect class="cell" x="350" y="50" width="94" height="40" rx="5"/>
+      <rect class="cap" x="444" y="61" width="6" height="18" rx="1.5"/>
+      <rect id="cell-fill" x="353" y="53" width="0" height="34" rx="3"/>
+      <path class="bolt" d="M400 56l-10 14h7l-3 12l11-16h-7z"/>
+      <text class="term" x="354" y="46">−</text>
+      <text class="term" x="434" y="46">+</text>
+    </svg>
+    <p id="loader-text">Loading 0%</p>
+  </div>
+
+  <header class="nav">
+    <a href="#home" class="logo">IA<span>.</span></a>
+    <nav>
+      <a href="#about">About</a>
+      <a href="#work">Projects</a>
+      <a href="#linkedin">Posts</a>
+      <a href="#skills">Skills</a>
+      <a href="#contact">Contact</a>
+    </nav>
+  </header>
+
+  <main>
+    <!-- HERO -->
+    <section id="home" class="panel hero">
+      <div class="side left reveal">
+        <p class="eyebrow">Hello, I'm</p>
+        <h1>Isuru<br>Anjana</h1>
+      </div>
+      <div class="side right reveal">
+        <p class="lead">Electrical Engineering undergraduate at the University of Moratuwa, passionate about power systems and electrical machines, and always eager to try new things.</p>
+        <p class="hint"><a href="#about">Scroll to explore ↓</a></p>
+      </div>
+    </section>
+
+    <!-- ABOUT + EDUCATION -->
+    <section id="about" class="panel wide">
+      <div class="side left reveal">
+        <p class="eyebrow">01 — About</p>
+        <h2>About me</h2>
+        <p class="about-text">Hi, I'm Isuru Anjana, an Electrical Engineering undergraduate at the University of Moratuwa. My academic journey began at Polpagoda Dharmapala M.V., where passing the Grade 5 Scholarship examination with 180 marks earned me placement at Richmond College, Galle. There, I achieved 8 As and 1 B at the G.C.E. O/L exam and 3 As in the Physical Science stream at the G.C.E. A/L exam. At the University of Moratuwa, I secured a 3.71 GPA in my first semester to enter the Department of Electrical Engineering, where I am currently pursuing my B.Sc. Engineering degree.</p>
+      </div>
+      <div class="side right reveal">
+        <div class="card edu">
+          <h3>Education milestones</h3>
+          <!-- Series circuit: +V → R1 → C1 → L1 → D1 → LED1 → GND.
+               Each milestone is a component; current flows down the wire. -->
+          <ol class="circuit">
+            <li class="term vcc" aria-hidden="true">
+              <svg class="sym" viewBox="0 0 24 28"><circle cx="12" cy="8" r="4"/><path d="M12 12V28M10 8h4M12 6v4"/></svg>
+              <span class="ref">V<sub>IN</sub></span>
+            </li>
+            <li style="--i:0">
+              <svg class="sym" viewBox="0 0 24 28" aria-hidden="true"><path d="M12 0V5L17 7L7 10L17 13L7 16L17 19L7 22L12 23V28"/></svg>
+              <p class="t-place"><span class="ref">R1</span>Polpagoda Dharmapala M.V.</p>
+              <p class="t-detail">Grade 5 Scholarship — <strong>180 marks</strong></p>
+            </li>
+            <li style="--i:1">
+              <svg class="sym" viewBox="0 0 24 28" aria-hidden="true"><path d="M12 0V11M5 11H19M5 17H19M12 17V28"/></svg>
+              <p class="t-place"><span class="ref">C1</span>Richmond College, Galle</p>
+              <p class="t-detail">G.C.E. O/L — <strong>8 A, 1 B</strong></p>
+            </li>
+            <li style="--i:2">
+              <svg class="sym" viewBox="0 0 24 28" aria-hidden="true"><path d="M12 0V4a2.5 2.5 0 0 1 0 5a2.5 2.5 0 0 1 0 5a2.5 2.5 0 0 1 0 5a2.5 2.5 0 0 1 0 5V28"/></svg>
+              <p class="t-place"><span class="ref">L1</span>Richmond College, Galle</p>
+              <p class="t-detail">G.C.E. A/L, Physical Science — <strong>3 A</strong></p>
+            </li>
+            <li style="--i:3">
+              <svg class="sym" viewBox="0 0 24 28" aria-hidden="true"><path d="M12 0V9M6 9H18L12 19Z M6 19H18M12 19V28"/></svg>
+              <p class="t-place"><span class="ref">D1</span>University of Moratuwa</p>
+              <p class="t-detail">Semester 1 GPA — <strong>3.71</strong></p>
+            </li>
+            <li class="now" style="--i:4">
+              <svg class="sym led" viewBox="0 0 24 28" aria-hidden="true"><path class="led-body" d="M6 9H18L12 19Z"/><path d="M12 0V9M6 9H18L12 19Z M6 19H18M12 19V28M17 13l4-3m-2.5 0h2.5v2.5M18 17.5l4-3m-2.5 0h2.5v2.5"/></svg>
+              <p class="t-place"><span class="ref">LED1</span>Dept. of Electrical Engineering</p>
+              <p class="t-detail">B.Sc. Engineering (Hons) — <strong>in progress</strong></p>
+            </li>
+            <li class="term gnd" aria-hidden="true">
+              <svg class="sym" viewBox="0 0 24 28"><path d="M12 0V12M4 12H20M7 16H17M10 20H14"/></svg>
+            </li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROJECTS -->
+    <section id="work" class="panel wide projects-panel">
+      <div class="section-head reveal">
+        <p class="eyebrow">02 — Projects</p>
+        <h2>Selected work</h2>
+        <p class="sub">Hover (or tap) a card to flip it.</p>
+      </div>
+
+      <div class="side left proj-col">
+        <article class="flip reveal" tabindex="0">
+          <div class="flip-inner">
+            <div class="face front">
+              <span class="tag">C++ · Arduino</span>
+              <h3>Maze-Solving Robot</h3>
+              <p>🏆 1st Runner-Up, Maze-Solving Robot Competition. Autonomous two-wheel robot that solves a walled maze.</p>
+            </div>
+            <div class="face back">
+              <p>Left-hand wall-following with three ultrasonic sensors, PD wall-centering, self-learning 90° turns, stuck recovery and an IR finish-line stop.</p>
+              <a class="btn sm" href="https://github.com/IsuruAnjanaGalle/Arduino-maze-solving-robot" target="_blank" rel="noopener">View on GitHub ↗</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="flip reveal" tabindex="0">
+          <div class="flip-inner">
+            <div class="face front">
+              <span class="tag">Jac · Full-stack</span>
+              <h3>Park &amp; Ride Sri Lanka</h3>
+              <p>Live bus-tracking and seat booking, built for JacHack.</p>
+            </div>
+            <div class="face back">
+              <p>Park at a Metro bus terminal, book a seat on a live-tracked bus and board by QR scan. Passenger, driver and admin views, written in Jac.</p>
+              <a class="btn sm" href="https://github.com/IsuruAnjanaGalle/Park-ride-bus-tracking" target="_blank" rel="noopener">View on GitHub ↗</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="flip reveal" tabindex="0">
+          <div class="flip-inner">
+            <div class="face front">
+              <span class="tag">Jac · React · TS</span>
+              <h3>Pizza Hut on Jac</h3>
+              <p>Team ordering platform on Jaseci with an AI ordering chat.</p>
+            </div>
+            <div class="face back">
+              <p>Monorepo for a 3-developer team: Jac walkers for catalog, delivery tracking and AI chat; React 19 + Vite + Tailwind front end.</p>
+              <a class="btn sm" href="https://github.com/IsuruAnjanaGalle/Pizza-hut-jac" target="_blank" rel="noopener">View on GitHub ↗</a>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <div class="side right proj-col">
+        <article class="flip reveal" tabindex="0">
+          <div class="flip-inner">
+            <div class="face front">
+              <span class="tag">HTML · CSS</span>
+              <h3>Pizza Hut Demo</h3>
+              <p>Responsive restaurant landing page.</p>
+            </div>
+            <div class="face back">
+              <p>A fully responsive demo website for a pizza restaurant, with menu sections and mobile-friendly layout.</p>
+              <a class="btn sm" href="https://isuruanjanagalle.github.io/Pizza-Hut/" target="_blank" rel="noopener">Open live site ↗</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="flip reveal" tabindex="0">
+          <div class="flip-inner">
+            <div class="face front">
+              <span class="tag">HTML · CSS</span>
+              <h3>Travel Site</h3>
+              <p>Demo travel agency website.</p>
+            </div>
+            <div class="face back">
+              <p>A travel landing page showcasing destinations, built with plain HTML and CSS and hosted on GitHub Pages.</p>
+              <a class="btn sm" href="https://isuruanjanagalle.github.io/Travel-site-DEMO-/" target="_blank" rel="noopener">Open live site ↗</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="flip reveal" tabindex="0">
+          <div class="flip-inner">
+            <div class="face front">
+              <span class="tag">CSS · Animation</span>
+              <h3>Animation Web</h3>
+              <p>Experiments in CSS motion and hover effects.</p>
+            </div>
+            <div class="face back">
+              <p>A playground of pure-CSS animations — part of a series of UI effect experiments like glowing text and mouse hovers.</p>
+              <a class="btn sm" href="https://isuruanjanagalle.github.io/Animation-Web/" target="_blank" rel="noopener">Open live site ↗</a>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- LINKEDIN -->
+    <section id="linkedin" class="panel wide posts-panel">
+      <div class="section-head reveal">
+        <p class="eyebrow">03 — On LinkedIn</p>
+        <h2>Recent posts</h2>
+        <a class="sub link" href="https://www.linkedin.com/in/isuru-anjana-043981438/" target="_blank" rel="noopener">Follow me on LinkedIn ↗</a>
+      </div>
+      <!-- Posts rebuilt in the site theme (LinkedIn's own embed can't be restyled).
+           Text copied from the posts; video and photo load from LinkedIn's media servers. -->
+      <div class="side left reveal">
+        <article class="post">
+          <header class="post-head">
+            <img class="avatar" src="https://media.licdn.com/dms/image/v2/D4E03AQG5i7W5JGYWPw/profile-displayphoto-scale_400_400/B4EaC9aT0iKwAk-/0/1789884187911?e=2147483647&amp;v=beta&amp;t=mwyFk8lTU4ZfulV0df9_FxoulFr0a4B6A-PviWh7-R0" alt="" width="40" height="40" loading="lazy">
+            <div><p class="post-name">Isuru Anjana</p><p class="post-meta">Student at University of Moratuwa</p></div>
+            <svg class="li-logo" viewBox="0 0 24 24" aria-label="LinkedIn"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg>
+          </header>
+          <div class="post-text">
+            <p><strong>🏆 1st Runner-Up at the Maze-Solving Robot Competition! 🥈🤖</strong></p>
+            <p>Navigating an unknown maze autonomously sounds simple until you face strict hardware limits: no wheel encoders and no global mapping.</p>
+            <p>Securing 2nd Place (1st Runner-Up) with a run time of 33.81 seconds in the Department of Electrical Engineering's Special Term 1 competition was a true test of low-level control, logic design, and rapid iteration.</p>
+            <p><strong>The Real Problem: Open-Loop Blind Spots</strong><br>Our initial approach relied on simple time-delay functions for turning. That quickly broke down: across repeated maneuvers, wheel slip, battery drain, and surface friction accumulated severe angular drift, throwing the bot off course.</p>
+            <p><strong>The Solution: Closed-Loop Relative Distance Referencing</strong><br>Without encoders to measure turn angle, we engineered two sensor-driven feedback mechanisms:</p>
+            <p><strong>Wall-Bounded Turns:</strong> Before turning near a dead-end wall, the bot stores the front wall distance. As it rotates, the side sensor sweeping toward that wall actively checks for that baseline reading to terminate the turn precisely at 90°.</p>
+            <p><strong>Corridor Branch Turns (Left-Hand Rule):</strong> At open intersections, the bot samples the open corridor width on its left before initiating the turn. During rotation, the front sensor searches for that target distance profile to lock heading alignment.</p>
+            <p><strong>Handling Diagonal Blindspots (Two Stage Turn Execution):</strong><br>A pure step and check method sometimes triggered premature stops on angled wall geometries. To eliminate false triggers, we split every turn into two phases:</p>
+            <p><strong>Phase 1 (Blind Pivot):</strong> A fast ~45° rotation to bypass false diagonal reflections.</p>
+            <p><strong>Phase 2 (Stepped Verification):</strong> Micro-stepped rotation with real-time sensor polling until the saved target value is matched.</p>
+            <p>Combined with a custom lightweight chassis modeled in Blender and 3D printed for structural stability, this control loop made our runs exceptionally repeatable.</p>
+            <p>Huge congratulations to my teammates Isuru Anjana, Kaveesha Abesekara, and nethmi indima for the relentless debugging, and sincere thanks to the Department of Electrical Engineering faculty and mentors for organizing such an engaging challenge!</p>
+            <p>GitHub Repository: <a href="https://github.com/IsuruAnjanaGalle/Arduino-maze-solving-robot" target="_blank" rel="noopener">Arduino-maze-solving-robot</a></p>
+            <p class="hashtags">#Robotics #EmbeddedSystems #ElectricalEngineering #ControlSystems #AutonomousRobots #ProblemSolving #Innovation #EngineeringJourney #MazesolvingRobot #Arduino</p>
+          </div>
+          <button class="see-more" type="button" aria-expanded="false">…see more</button>
+          <video class="post-video portrait" controls muted loop playsinline preload="metadata"
+                 poster="https://media.licdn.com/dms/image/v2/D5605AQE83wdzScGlLg/videocover-high/B56aGXfaP4HsBM-/0/1793542958203?e=2147483647&amp;v=beta&amp;t=VzDNOD9R0ipbGjwQ-EuJEpJz5vQgIc0j_BOMQCoOvRM">
+            <source src="https://dms.licdn.com/playlist/vid/v2/D5605AQE83wdzScGlLg/mp4-720p-30fp-crf28/B56aGXfaP4HsB8-/0/1793542962774?e=2147483647&amp;v=beta&amp;t=3YUETeMbRF13V0Kp6FQhC9XHNVcTF9Xh8SnSiDBZEcE" type="video/mp4">
+          </video>
+          <footer class="post-foot">
+            <span class="reacts">30 reactions</span>
+            <a href="https://www.linkedin.com/feed/update/urn:li:ugcPost:7522664397438320640/" target="_blank" rel="noopener">View on LinkedIn ↗</a>
+          </footer>
+        </article>
+      </div>
+
+      <div class="side right reveal">
+        <article class="post">
+          <header class="post-head">
+            <img class="avatar" src="https://media.licdn.com/dms/image/v2/D4E03AQG5i7W5JGYWPw/profile-displayphoto-scale_400_400/B4EaC9aT0iKwAk-/0/1789884187911?e=2147483647&amp;v=beta&amp;t=mwyFk8lTU4ZfulV0df9_FxoulFr0a4B6A-PviWh7-R0" alt="" width="40" height="40" loading="lazy">
+            <div><p class="post-name">Isuru Anjana</p><p class="post-meta">Student at University of Moratuwa</p></div>
+            <svg class="li-logo" viewBox="0 0 24 24" aria-label="LinkedIn"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.270 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.450H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg>
+          </header>
+          <div class="post-text">
+            <p>It started with a dream: "What if I could just talk to my laptop, and it got things done?" 🎙️</p>
+            <p>I built it in my free time during my university vacation. Now it's a real-time voice assistant on my own laptop, called Claude ("Hey Claude").</p>
+            <p><strong>What it does:</strong><br>→ Controls my desktop, sets reminders and types by voice<br>→ Explains anything on my screen, searches Google and writes cited research reports<br>→ Turns my app ideas into prompts for my coding agent<br>→ Listens first, and stops talking the moment I interrupt<br>→ Starts with Windows, waits quietly in the background, and pauses the mic with one click.</p>
+            <p><strong>How it works, for free:</strong><br>Simple commands run with no AI at all. Everyday chat uses a local model on my laptop. Only harder tasks go to free cloud models, with automatic fallbacks. On battery it switches to the laptop's NPU.</p>
+            <p><strong>How the logic works:</strong><br>🎧 Mic → voice detection with a live noise floor<br>📝 Whisper transcribes on my GPU in about 0.3 seconds<br>🧠 A smart router decides who answers:<br>• Simple commands → no AI at all, done in about 0.4 s<br>• Everyday chat → local Qwen model on my laptop<br>• Harder tasks → free cloud models (Gemini, then Groq, Mistral and OpenRouter as fallbacks)<br>🔊 The reply streams back as speech, sentence by sentence</p>
+            <p><strong>Privacy and safety:</strong><br>🔒 Most processing stays local<br>🔒 Risky actions need my face and a spoken "yes", and every approval is logged<br>⚠️ Still improving: free quotas, short-word recognition, Windows only</p>
+            <p>My daily routines are faster now: a sentence instead of ten clicks.</p>
+            <p>From a dream to something I use every day. 🚀</p>
+            <p class="hashtags">#AI #VoiceAssistant #LocalAI #Python #Privacy #Productivity #BuildInPublic</p>
+          </div>
+          <button class="see-more" type="button" aria-expanded="false">…see more</button>
+          <video class="post-video" controls muted loop playsinline preload="metadata"
+                 poster="https://media.licdn.com/dms/image/v2/D5605AQFJz2rMzKs9rQ/videocover-high/B56aGsO35oHUBM-/0/1793890946522?e=2147483647&amp;v=beta&amp;t=Ct2mTA7qe8iesmJ9kA5iKR9mMEfH1cCpdV2wqJEaTz8">
+            <source src="https://dms.licdn.com/playlist/vid/v2/D5605AQFJz2rMzKs9rQ/mp4-720p-30fp-crf28/B56aGsO35oHUB8-/0/1793890955812?e=2147483647&amp;v=beta&amp;t=FUowhl7Ztsk6WDetABLBSTHnZQW5zX-JjAhmJMRqICs" type="video/mp4">
+          </video>
+          <footer class="post-foot">
+            <span class="reacts">5 reactions</span>
+            <a href="https://www.linkedin.com/feed/update/urn:li:ugcPost:7524123957592260608/" target="_blank" rel="noopener">View on LinkedIn ↗</a>
+          </footer>
+        </article>
+      </div>
+    </section>
+
+    <!-- SKILLS -->
+    <section id="skills" class="panel">
+      <div class="side left reveal">
+        <p class="eyebrow">04 — Skills</p>
+        <h2>What I work with</h2>
+      </div>
+      <div class="side right reveal tag-circuit">
+        <!-- Circuit traces between the tags are drawn here by main.js -->
+        <svg class="tag-wires" aria-hidden="true"></svg>
+        <ul class="tags">
+          <!-- Ordered like a project flowing through the circuit:
+               theory → modelling → circuit simulation → PCB → mechanical
+               → hardware → software → final load (Robotics) → ground -->
+          <li>Electrical Engineering</li><li>Power systems</li>
+          <li>MATLAB</li><li>Simulink</li>
+          <li>LTspice</li><li>Proteus</li><li>KiCad</li>
+          <li>SolidWorks</li><li>Blender</li>
+          <li>Arduino</li><li>Embedded systems</li><li>C++</li>
+          <li>Python</li><li>Jac / Jaseci</li>
+          <li>Robotics</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- CONTACT -->
+    <section id="contact" class="panel">
+      <div class="side left reveal">
+        <p class="eyebrow">05 — Contact</p>
+        <h2>Let's connect</h2>
+      </div>
+      <div class="side right reveal">
+        <p>Interested in working together or just want to say hi? Reach out on LinkedIn or check my code on GitHub.</p>
+        <div class="btn-row">
+          <a class="btn" href="https://www.linkedin.com/in/isuru-anjana-043981438/" target="_blank" rel="noopener">LinkedIn ↗</a>
+          <a class="btn ghost" href="https://github.com/IsuruAnjanaGalle" target="_blank" rel="noopener">GitHub ↗</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>© <span id="year"></span> Isuru Anjana</footer>
+
+  <script src="main.js?v=12"></script>
+  <script src="fx.js?v=2"></script>
+</body>
+</html>
