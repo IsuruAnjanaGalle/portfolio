@@ -7,6 +7,7 @@
   const SAFE_W = 880;
   const BG = '#030404';
   const EASE = 0.12;          // lower = smoother/laggier frame interpolation
+  const KEYFRAME_STEP = 8;    // load every 8th frame first for instant global scrubbing
 
   const canvas = document.getElementById('bg');
   const ctx = canvas.getContext('2d', { alpha: false });
@@ -16,7 +17,8 @@
   document.getElementById('year').textContent = new Date().getFullYear();
 
   // ---------- Pick resolution set ----------
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  // Cap DPR at 1.5 to match 1080p source density and eliminate massive 4K backbuffer memory waste
+  const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
   const smallScreen = Math.min(innerWidth, innerHeight) < 700 || innerWidth < 700;
   const set = smallScreen ? 'sm' : 'lg';
   const pad = n => String(n).padStart(4, '0');
@@ -24,52 +26,126 @@
 
   // ---------- Load frames ----------
   const frames = new Array(FRAME_COUNT);
-  let loaded = 0, drawnOnce = false;
+  const status = new Uint8Array(FRAME_COUNT); // 0 = unrequested, 1 = loading, 2 = loaded
+  let loaded = 0, drawnOnce = false, loaderDismissed = false;
   let target = 0, current = 0, lastDrawn = -1, ticking = false;
 
-  function loadFrame(i, tries = 3) {
+  function loadFrame(i) {
+    if (status[i] !== 0) return Promise.resolve(frames[i]);
+    status[i] = 1;
     return new Promise(res => {
       const img = new Image();
       img.decoding = 'async';
       img.onload = () => {
-        (img.decode ? img.decode() : Promise.resolve()).catch(() => {}).then(() => {
-          frames[i] = img;
-          // Redraw if this frame is the one on screen (or nothing was drawn yet)
-          if (!drawnOnce || Math.abs(i - current) < 1.5) draw(current);
-          res();
-        });
+        frames[i] = img;
+        status[i] = 2;
+        loaded++;
+        if (!drawnOnce || Math.abs(i - current) < 1.5) draw(current);
+        res(img);
       };
-      img.onerror = () => tries > 1
-        ? setTimeout(() => loadFrame(i, tries - 1).then(res), 400)
-        : res();
+      img.onerror = () => {
+        status[i] = 0; // allow retry
+        res(null);
+      };
       img.src = url(i);
     });
   }
 
-  function progress() {
-    loaded++;
-    const pct = Math.round((loaded / FRAME_COUNT) * 100);
-    // Battery fill: 88px inner width
-    cellFill.setAttribute('width', (88 * pct / 100).toFixed(1));
-    loaderText.textContent = `Loading ${pct}%`;
-    if (loaded === FRAME_COUNT) {
-      loader.classList.add('full');
-      loaderText.textContent = 'Loading 100%';
-      setTimeout(() => loader.classList.add('done'), 500);   // let the full battery show briefly
+  // Fast battery animation for instant interactivity
+  function dismissLoader() {
+    if (loaderDismissed) return;
+    loaderDismissed = true;
+    cellFill.setAttribute('width', '88');
+    loaderText.textContent = 'READY';
+    loader.classList.add('full');
+    setTimeout(() => {
+      loader.classList.add('done');
+      loader.setAttribute('aria-hidden', 'true');
+    }, 150);
+  }
+
+  function updateLoaderProgress(pct) {
+    if (loaderDismissed) return;
+    const clamped = Math.min(Math.max(pct, 0), 100);
+    cellFill.setAttribute('width', (88 * clamped / 100).toFixed(1));
+    loaderText.textContent = `Loading ${Math.round(clamped)}%`;
+    if (clamped >= 100) dismissLoader();
+  }
+
+  // Concurrency-controlled proximity-aware stream manager
+  const CONCURRENCY = 4;
+  let activeWorkers = 0;
+
+  function getNextFrameIndex() {
+    // 1. Check if any keyframes are not yet loaded/requested
+    let bestKeyframe = -1, minKeyDist = Infinity;
+    for (let k = 0; k < FRAME_COUNT; k += KEYFRAME_STEP) {
+      if (status[k] === 0) {
+        const dist = Math.abs(k - target);
+        if (dist < minKeyDist) {
+          minKeyDist = dist;
+          bestKeyframe = k;
+        }
+      }
+    }
+    if (bestKeyframe !== -1) return bestKeyframe;
+
+    // Ensure the final frame is also loaded early as keyframe
+    if (status[FRAME_COUNT - 1] === 0) return FRAME_COUNT - 1;
+
+    // 2. Otherwise find the unrequested frame closest to the user's current scroll target
+    let bestIndex = -1, minDist = Infinity;
+    for (let i = 0; i < FRAME_COUNT; i++) {
+      if (status[i] === 0) {
+        const dist = Math.abs(i - target);
+        if (dist < minDist) {
+          minDist = dist;
+          bestIndex = i;
+        }
+      }
+    }
+    return bestIndex;
+  }
+
+  function pumpQueue() {
+    while (activeWorkers < CONCURRENCY) {
+      const nextIdx = getNextFrameIndex();
+      if (nextIdx === -1) break;
+      activeWorkers++;
+      loadFrame(nextIdx).then(() => {
+        activeWorkers--;
+        pumpQueue();
+      });
     }
   }
 
-  // First frame immediately, then the rest in parallel batches.
+  // Phase 1: Load frame 0 immediately, followed by initial buffer
   loadFrame(0).then(() => {
-    progress(); resize(); draw(current);
-    let next = 1;
-    const worker = () => next < FRAME_COUNT
-      ? loadFrame(next++).then(() => { progress(); return worker(); })
-      : Promise.resolve();
-    for (let k = 0; k < 4; k++) worker();
+    resize();
+    draw(current);
+    updateLoaderProgress(60);
+
+    // Load initial frames for smooth top-of-page scrubbing
+    let initialCount = 0;
+    const initialTarget = Math.min(6, FRAME_COUNT);
+    for (let i = 1; i < initialTarget; i++) {
+      loadFrame(i).then(() => {
+        initialCount++;
+        updateLoaderProgress(60 + (initialCount / (initialTarget - 1)) * 40);
+        if (initialCount >= 2) dismissLoader();
+      });
+    }
+
+    // Defer background frame stream until main thread completes initial layout & paint
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(() => pumpQueue(), { timeout: 1200 });
+    } else {
+      setTimeout(pumpQueue, 250);
+    }
   });
-  // Don't block the page forever on slow connections
-  setTimeout(() => loader.classList.add('done'), 6000);
+
+  // Guarantee loader dismissal in under 400ms even on slow networks
+  setTimeout(dismissLoader, 400);
 
   // ---------- Layout: fit without cropping the person ----------
   let cw = 0, ch = 0, box = { x: 0, y: 0, w: 0, h: 0 };
@@ -79,7 +155,7 @@
     canvas.width = Math.round(cw * dpr);
     canvas.height = Math.round(ch * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.imageSmoothingQuality = 'high';
+    ctx.imageSmoothingQuality = 'medium';
 
     const cover = Math.max(cw / SRC_W, ch / SRC_H);
     // Never scale beyond what keeps the full height (head→feet) visible,
@@ -101,25 +177,44 @@
     return null;
   }
 
-  function fadeEdges() {
-    const f = 0.18; // fade size relative to drawn image
-    if (box.y > 0.5) { // letterboxed vertically (portrait)
+  let lastBox = { x: -1, y: -1, w: -1, h: -1 };
+  let gradTop = null, gradBottom = null, gradLeft = null, gradRight = null;
+
+  function updateGradients() {
+    if (box.x === lastBox.x && box.y === lastBox.y && box.w === lastBox.w && box.h === lastBox.h) return;
+    lastBox = { ...box };
+    const f = 0.18;
+    if (box.y > 0.5) {
       const s = box.h * f;
-      let g = ctx.createLinearGradient(0, box.y, 0, box.y + s);
-      g.addColorStop(0, BG); g.addColorStop(1, 'rgba(3,4,4,0)');
-      ctx.fillStyle = g; ctx.fillRect(0, box.y, cw, s);
-      g = ctx.createLinearGradient(0, box.y + box.h, 0, box.y + box.h - s);
-      g.addColorStop(0, BG); g.addColorStop(1, 'rgba(3,4,4,0)');
-      ctx.fillStyle = g; ctx.fillRect(0, box.y + box.h - s, cw, s);
+      gradTop = ctx.createLinearGradient(0, box.y, 0, box.y + s);
+      gradTop.addColorStop(0, BG); gradTop.addColorStop(1, 'rgba(3,4,4,0)');
+      gradBottom = ctx.createLinearGradient(0, box.y + box.h, 0, box.y + box.h - s);
+      gradBottom.addColorStop(0, BG); gradBottom.addColorStop(1, 'rgba(3,4,4,0)');
+    } else {
+      gradTop = gradBottom = null;
     }
-    if (box.x > 0.5) { // pillarboxed (ultra-wide)
+    if (box.x > 0.5) {
       const s = box.w * 0.1;
-      let g = ctx.createLinearGradient(box.x, 0, box.x + s, 0);
-      g.addColorStop(0, BG); g.addColorStop(1, 'rgba(3,4,4,0)');
-      ctx.fillStyle = g; ctx.fillRect(box.x, 0, s, ch);
-      g = ctx.createLinearGradient(box.x + box.w, 0, box.x + box.w - s, 0);
-      g.addColorStop(0, BG); g.addColorStop(1, 'rgba(3,4,4,0)');
-      ctx.fillStyle = g; ctx.fillRect(box.x + box.w - s, 0, s, ch);
+      gradLeft = ctx.createLinearGradient(box.x, 0, box.x + s, 0);
+      gradLeft.addColorStop(0, BG); gradLeft.addColorStop(1, 'rgba(3,4,4,0)');
+      gradRight = ctx.createLinearGradient(box.x + box.w, 0, box.x + box.w - s, 0);
+      gradRight.addColorStop(0, BG); gradRight.addColorStop(1, 'rgba(3,4,4,0)');
+    } else {
+      gradLeft = gradRight = null;
+    }
+  }
+
+  function fadeEdges() {
+    updateGradients();
+    if (gradTop) {
+      const s = box.h * 0.18;
+      ctx.fillStyle = gradTop; ctx.fillRect(0, box.y, cw, s);
+      ctx.fillStyle = gradBottom; ctx.fillRect(0, box.y + box.h - s, cw, s);
+    }
+    if (gradLeft) {
+      const s = box.w * 0.1;
+      ctx.fillStyle = gradLeft; ctx.fillRect(box.x, 0, s, ch);
+      ctx.fillStyle = gradRight; ctx.fillRect(box.x + box.w - s, 0, s, ch);
     }
   }
 
@@ -160,6 +255,7 @@
   function onScroll() {
     target = scrollTarget();
     if (!ticking) { ticking = true; requestAnimationFrame(loop); }
+    pumpQueue();
   }
 
   addEventListener('scroll', onScroll, { passive: true });
@@ -194,7 +290,7 @@
   // ripple through the word letter by letter. Screen readers get the
   // original text through aria-label.
   document.querySelectorAll('h1, section h2').forEach(h => {
-    h.setAttribute('aria-label', h.innerText.replace(/\s+/g, ' ').trim());   // innerText keeps the <br> as a space
+    h.setAttribute('aria-label', h.textContent.replace(/\s+/g, ' ').trim());
     let i = 0;
     [...h.childNodes].forEach(node => {
       if (node.nodeType !== 3) return;               // keep <br> etc.

@@ -16,13 +16,35 @@
   let W = 0, H = 0, mobile = false;
   let traces = [], pulses = [], arcs = [], sparks = [];
   let nextArc = 0, scrollBoost = 0, lastScroll = scrollY;
+  let traceCanvas = null, pulseCanvas = null, glowCanvas = null;
 
   const rand = (a, b) => a + Math.random() * (b - a);
   const pick = arr => arr[(Math.random() * arr.length) | 0];
 
+  // Pre-render reusable stamps to eliminate radial gradient object allocations in 60fps render loop
+  function createStamps() {
+    pulseCanvas = document.createElement('canvas');
+    pulseCanvas.width = 16; pulseCanvas.height = 16;
+    const pctx = pulseCanvas.getContext('2d');
+    const pg = pctx.createRadialGradient(8, 8, 0, 8, 8, 7);
+    pg.addColorStop(0, 'rgba(' + CORE + ', 0.85)');
+    pg.addColorStop(0.3, 'rgba(' + ARC + ', 0.45)');
+    pg.addColorStop(1, 'rgba(' + ARC + ', 0)');
+    pctx.fillStyle = pg;
+    pctx.beginPath(); pctx.arc(8, 8, 7, 0, Math.PI * 2); pctx.fill();
+
+    glowCanvas = document.createElement('canvas');
+    glowCanvas.width = 80; glowCanvas.height = 80;
+    const gctx = glowCanvas.getContext('2d');
+    const gg = gctx.createRadialGradient(40, 40, 0, 40, 40, 40);
+    gg.addColorStop(0, 'rgba(' + ARC + ', 0.35)');
+    gg.addColorStop(1, 'rgba(' + ARC + ', 0)');
+    gctx.fillStyle = gg;
+    gctx.beginPath(); gctx.arc(40, 40, 40, 0, Math.PI * 2); gctx.fill();
+  }
+  createStamps();
+
   // ---------- Zones that keep effects off the person ----------
-  // Desktop: left & right side bands. Mobile: top & bottom bands
-  // (the frame sits in the middle of a portrait screen).
   function zone() {
     if (!mobile) {
       const clear = Math.min(W * 0.2, 300);          // half-width of the clear centre
@@ -77,6 +99,28 @@
       acc += t.lens[i];
     }
     return t.pts[t.pts.length - 1];
+  }
+
+  // Pre-render static traces once per resize onto offscreen canvas
+  function renderStaticTraces() {
+    traceCanvas = document.createElement('canvas');
+    traceCanvas.width = canvas.width;
+    traceCanvas.height = canvas.height;
+    const tctx = traceCanvas.getContext('2d');
+    tctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    tctx.lineCap = 'round';
+    tctx.lineJoin = 'round';
+    for (const t of traces) {
+      tctx.strokeStyle = 'rgba(' + ARC + ', 0.07)';
+      tctx.lineWidth = 1;
+      tctx.beginPath();
+      t.pts.forEach(([x, y], i) => i ? tctx.lineTo(x, y) : tctx.moveTo(x, y));
+      tctx.stroke();
+      tctx.fillStyle = 'rgba(' + ARC + ', 0.12)';
+      for (const p of [t.pts[0], t.pts[t.pts.length - 1]]) {
+        tctx.beginPath(); tctx.arc(p[0], p[1], 1.5, 0, Math.PI * 2); tctx.fill();
+      }
+    }
   }
 
   // ---------- Lightning (midpoint displacement) ----------
@@ -144,32 +188,20 @@
     const n = mobile ? 6 : 12;
     for (let i = 0; i < n; i++) traces.push(makeTrace(zone()));
     pulses = traces.map(t => ({ t, d: rand(0, t.total), v: rand(60, 140) }));
+    renderStaticTraces();
   }
 
   // ---------- Draw ----------
-  function drawTraces(time) {
-    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    for (const t of traces) {
-      ctx.strokeStyle = 'rgba(' + ARC + ', 0.07)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      t.pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
-      ctx.stroke();
-      // solder pads at the ends
-      ctx.fillStyle = 'rgba(' + ARC + ', 0.12)';
-      for (const p of [t.pts[0], t.pts[t.pts.length - 1]]) {
-        ctx.beginPath(); ctx.arc(p[0], p[1], 1.5, 0, Math.PI * 2); ctx.fill();
-      }
+  function drawTraces() {
+    if (traceCanvas) {
+      ctx.drawImage(traceCanvas, 0, 0, W, H);
     }
-    // travelling current pulses
-    for (const p of pulses) {
-      const [x, y] = pointOn(p.t, p.d);
-      const g = ctx.createRadialGradient(x, y, 0, x, y, 6);
-      g.addColorStop(0, 'rgba(' + CORE + ', 0.85)');
-      g.addColorStop(0.3, 'rgba(' + ARC + ', 0.45)');
-      g.addColorStop(1, 'rgba(' + ARC + ', 0)');
-      ctx.fillStyle = g;
-      ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.fill();
+    // travelling current pulses (using pre-rendered pulse canvas stamp)
+    if (pulseCanvas) {
+      for (const p of pulses) {
+        const [x, y] = pointOn(p.t, p.d);
+        ctx.drawImage(pulseCanvas, x - 8, y - 8);
+      }
     }
   }
 
@@ -189,12 +221,13 @@
         ctx.lineWidth = 3 * w;  ctx.strokeStyle = 'rgba(' + ARC + ',' + (0.45 * alpha) + ')'; strokePath(p);
         ctx.lineWidth = 1.2 * w; ctx.strokeStyle = 'rgba(' + CORE + ',' + (0.95 * alpha) + ')'; strokePath(p);
       }
-      // glow at both electrodes
-      for (const [x, y] of [[a.x1, a.y1], [a.x2, a.y2]]) {
-        const g = ctx.createRadialGradient(x, y, 0, x, y, 40);
-        g.addColorStop(0, 'rgba(' + ARC + ',' + (0.35 * alpha) + ')');
-        g.addColorStop(1, 'rgba(' + ARC + ',0)');
-        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 40, 0, Math.PI * 2); ctx.fill();
+      // glow at both electrodes using pre-rendered stamp
+      if (glowCanvas) {
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.drawImage(glowCanvas, a.x1 - 40, a.y1 - 40);
+        ctx.drawImage(glowCanvas, a.x2 - 40, a.y2 - 40);
+        ctx.restore();
       }
     }
   }
@@ -221,7 +254,7 @@
     scrollBoost = Math.min(1, scrollBoost * 0.94 + sv * 0.004);
 
     for (const p of pulses) {
-      p.d += p.v * 0.5 * (1 + scrollBoost * 4) * dt;   // slower to suit the shorter traces
+      p.d += p.v * 0.5 * (1 + scrollBoost * 4) * dt;
       if (p.d > p.t.total) p.d = 0;
     }
 
@@ -231,21 +264,32 @@
     }
     if (Math.random() < (mobile ? 0.04 : 0.08) + scrollBoost * 0.2) ember();
 
-    for (const a of arcs) a.life += dt;
-    arcs = arcs.filter(a => a.life < a.max);
+    // In-place pruning of expired arcs (zero allocation)
+    for (let i = arcs.length - 1; i >= 0; i--) {
+      arcs[i].life += dt;
+      if (arcs[i].life >= arcs[i].max) {
+        arcs[i] = arcs[arcs.length - 1];
+        arcs.pop();
+      }
+    }
 
-    for (const s of sparks) {
+    // In-place pruning of expired sparks (zero allocation)
+    for (let i = sparks.length - 1; i >= 0; i--) {
+      const s = sparks[i];
       s.px = s.x; s.py = s.y;
       if (!s.drift) { s.vy += 520 * dt; s.vx *= 0.985; }
       s.x += s.vx * dt; s.y += s.vy * dt;
       s.life += dt;
+      if (s.life >= s.max || s.y >= H + 20) {
+        sparks[i] = sparks[sparks.length - 1];
+        sparks.pop();
+      }
     }
-    sparks = sparks.filter(s => s.life < s.max && s.y < H + 20);
-    if (sparks.length > 400) sparks.splice(0, sparks.length - 400);
+    if (sparks.length > 400) sparks.length = 400;
 
     ctx.clearRect(0, 0, W, H);
     ctx.globalCompositeOperation = 'lighter';
-    drawTraces(now);
+    drawTraces();
     drawArcs();
     drawSparks();
     ctx.globalCompositeOperation = 'source-over';
@@ -268,10 +312,28 @@
   addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(resize, 150); });
   resize();
 
-  if (reduce) {            // static circuit only
-    ctx.globalCompositeOperation = 'lighter';
-    drawTraces(0);
-    return;
+  function start() {
+    if (reduce) {            // static circuit only
+      ctx.globalCompositeOperation = 'lighter';
+      drawTraces();
+      return;
+    }
+    last = performance.now();
+    requestAnimationFrame(step);
   }
-  requestAnimationFrame(step);
+
+  // Defer electric animation loop until loader is dismissed so initial paint (FCP/LCP) is unblocked
+  const loader = document.getElementById('loader');
+  if (loader && !loader.classList.contains('done')) {
+    const observer = new MutationObserver(() => {
+      if (loader.classList.contains('done')) {
+        observer.disconnect();
+        start();
+      }
+    });
+    observer.observe(loader, { attributes: true, attributeFilter: ['class'] });
+    setTimeout(() => { observer.disconnect(); start(); }, 800);
+  } else {
+    start();
+  }
 })();
