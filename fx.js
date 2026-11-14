@@ -283,10 +283,22 @@
 
   if (reduce) {            // static circuit only
     ctx.globalCompositeOperation = 'lighter';
-    drawTraces(0);
+    drawTraces();
     return;
   }
-  requestAnimationFrame(step);
+  // Start the effects only once the loading screen is dismissed, so the first
+  // paint isn't competing with the animation loop
+  const start = () => { last = performance.now(); requestAnimationFrame(step); };
+  const loaderEl = document.getElementById('loader');
+  if (loaderEl && !loaderEl.classList.contains('done')) {
+    let started = false;
+    const go = () => { if (!started) { started = true; mo.disconnect(); start(); } };
+    const mo = new MutationObserver(() => { if (loaderEl.classList.contains('done')) go(); });
+    mo.observe(loaderEl, { attributes: true, attributeFilter: ['class'] });
+    setTimeout(go, 800);
+  } else {
+    start();
+  }
 
   // Let the page fire arcs and sparks (used by the title hover in main.js)
   window.siteFx = { arc: spawnArc, sparks: burst };
