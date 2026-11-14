@@ -464,14 +464,14 @@
     }));
     shots.forEach(s => s.addEventListener('animationend', () => s.classList.remove('tapped')));
     if (touch) {
-      const hint = document.querySelector('#photos .sub');
+      const hint = document.querySelector('#photos .photo-hint');
       if (hint) hint.textContent = 'Shot on my phone. Double-tap any photo to view it.';
     }
     // Collage: one glare wave across every photo the first time it's seen
     const collage = document.querySelector('.collage');
     new IntersectionObserver((es, o) => {
       if (es[0].isIntersecting) { collage.classList.add('glint'); o.disconnect(); }
-    }, { threshold: 0.25 }).observe(collage);
+    }, { threshold: 0, rootMargin: '0px 0px -15% 0px' }).observe(collage);
     // Closing from the page (x, backdrop, photo, Esc) steps back through the
     // history entry we added; the Back button does the same thing directly.
     const requestClose = () => {
@@ -598,6 +598,11 @@
   // ---------- Block copying ----------
   // CSS already stops selection; this also blocks Ctrl+C / Ctrl+X / Ctrl+A
   // and dragging content out of the page.
+  // No right-click / long-press menu on images and videos, so "Save image
+  // as…" / "Download image" / "Save video as…" aren't offered
+  document.addEventListener('contextmenu', e => {
+    if (e.target.closest('img, video, canvas, picture, svg, .shot, .viewer, .post-video, .print')) e.preventDefault();
+  });
   ['copy', 'cut', 'selectstart', 'dragstart'].forEach(type =>
     document.addEventListener(type, e => e.preventDefault()));
   document.addEventListener('keydown', e => {
@@ -821,8 +826,11 @@
   });
 
   // ---------- Reveal text ----------
+  // Reveal as soon as an element's top is a little way into the screen.
+  // (A percentage threshold failed for very tall blocks like the 70-photo
+  // collage, which stayed invisible until you had scrolled deep into it.)
   const io = new IntersectionObserver(entries => {
     entries.forEach(e => e.target.classList.toggle('in', e.isIntersecting));
-  }, { threshold: 0.2 });
+  }, { threshold: 0, rootMargin: '0px 0px -10% 0px' });
   document.querySelectorAll('.reveal').forEach(el => io.observe(el));
 })();
