@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=23">
+  <link rel="stylesheet" href="style.css?v=46">
 </head>
 <body>
   <!-- Fixed scroll-driven background -->
@@ -99,6 +99,7 @@
       <a href="#work">Projects</a>
       <a href="#linkedin">Posts</a>
       <a href="#skills">Skills</a>
+      <a href="#photos">Photos</a>
       <a href="#contact">Contact</a>
     </nav>
   </header>
@@ -296,7 +297,7 @@
             <p class="hashtags">#Robotics #EmbeddedSystems #ElectricalEngineering #ControlSystems #AutonomousRobots #ProblemSolving #Innovation #EngineeringJourney #MazesolvingRobot #Arduino</p>
           </div>
           <button class="see-more" type="button" aria-expanded="false">…see more</button>
-          <video class="post-video portrait" controls muted loop playsinline preload="metadata"
+          <video class="post-video portrait" controls muted loop playsinline preload="none"
                  poster="https://media.licdn.com/dms/image/v2/D5605AQE83wdzScGlLg/videocover-high/B56aGXfaP4HsBM-/0/1793542958203?e=2147483647&amp;v=beta&amp;t=VzDNOD9R0ipbGjwQ-EuJEpJz5vQgIc0j_BOMQCoOvRM">
             <source src="https://dms.licdn.com/playlist/vid/v2/D5605AQE83wdzScGlLg/mp4-720p-30fp-crf28/B56aGXfaP4HsB8-/0/1793542962774?e=2147483647&amp;v=beta&amp;t=3YUETeMbRF13V0Kp6FQhC9XHNVcTF9Xh8SnSiDBZEcE" type="video/mp4">
           </video>
@@ -326,7 +327,7 @@
             <p class="hashtags">#AI #VoiceAssistant #LocalAI #Python #Privacy #Productivity #BuildInPublic</p>
           </div>
           <button class="see-more" type="button" aria-expanded="false">…see more</button>
-          <video class="post-video" controls muted loop playsinline preload="metadata"
+          <video class="post-video" controls muted loop playsinline preload="none"
                  poster="https://media.licdn.com/dms/image/v2/D5605AQFJz2rMzKs9rQ/videocover-high/B56aGsO35oHUBM-/0/1793890946522?e=2147483647&amp;v=beta&amp;t=Ct2mTA7qe8iesmJ9kA5iKR9mMEfH1cCpdV2wqJEaTz8">
             <source src="https://dms.licdn.com/playlist/vid/v2/D5605AQFJz2rMzKs9rQ/mp4-720p-30fp-crf28/B56aGsO35oHUB8-/0/1793890955812?e=2147483647&amp;v=beta&amp;t=FUowhl7Ztsk6WDetABLBSTHnZQW5zX-JjAhmJMRqICs" type="video/mp4">
           </video>
@@ -362,10 +363,125 @@
       </div>
     </section>
 
+    <!-- PHOTOGRAPHY: collage of 30 phone photos. Click one to open it. -->
+    <section id="photos" class="panel wide photos-panel">
+      <div class="section-head reveal">
+        <p class="eyebrow">05 — Photography</p>
+        <h2>Through my lens</h2>
+        <p class="sub">Shot on my phone. Click any photo to view it.</p>
+      </div>
+      <div class="collage-wrap reveal">
+        <!-- Circuit traces between the photos, drawn by main.js -->
+        <svg class="tag-wires collage-wires" aria-hidden="true"></svg>
+      <ul class="collage">
+          <li><button class="shot" type="button" data-full="gallery/p09.webp" data-i="0" style="--k:0" aria-label="View photo: Temple with white walls and an octagonal tower">
+            <img src="gallery/thumbs/p09.webp" alt="Temple with white walls and an octagonal tower" width="1100" height="880" loading="lazy" decoding="async" draggable="false">
+          </button></li>
+          <li><button class="shot" type="button" data-full="gallery/p12.webp" data-i="1" style="--k:1" aria-label="View photo: Lotus offerings in front of a temple">
+            <img src="gallery/thumbs/p12.webp" alt="Lotus offerings in front of a temple" width="826" height="1100" loading="lazy" decoding="async" draggable="false">
+          </button></li>
+          <li><button class="shot" type="button" data-full="gallery/p16.webp" data-i="2" style="--k:2" aria-label="View photo: Cave shrine with a stupa and seated Buddha statues">
+            <img src="gallery/thumbs/p16.webp" alt="Cave shrine with a stupa and seated Buddha statues" width="826" height="1100" loading="lazy" decoding="async" draggable="false">
+          </button></li>
+          <li><button class="shot" type="button" data-full="gallery/p13.webp" data-i="3" style="--k:3" aria-label="View photo: Temple pavilion on a lake under flowering branches">
+            <img src="gallery/thumbs/p13.webp" alt="Temple pavilion on a lake under flowering branches" width="1100" height="880" loading="lazy" decoding="async" draggable="false">
+          </button></li>
+          <li><button class="shot" type="button" data-full="gallery/p03.webp" data-i="4" style="--k:4" aria-label="View photo: Ancient stone pillars with a white Buddha statue">
+            <img src="gallery/thumbs/p03.webp" alt="Ancient stone pillars with a white Buddha statue" width="880" height="1100" loading="lazy" decoding="async" draggable="false">
+          </button></li>
+          <li><button class="shot" type="button" data-full="gallery/p06.webp" data-i="5" style="--k:5" aria-label="View photo: Tall standing Buddha statue carved in rock, backlit">
+            <img src="gallery/thumbs/p06.webp" alt="Tall standing Buddha statue carved in rock, backlit" width="880" height="1100" loading="lazy" decoding="async" draggable="false">
+          </button></li>
+          <li><button class="shot" type="button" data-full="gallery/p08.webp" data-i="6" style="--k:6" aria-label="View photo: Row of golden Buddha statues by a lake with city towers">
+            <img src="gallery/thumbs/p08.webp" alt="Row of golden Buddha statues by a lake with city towers" width="1100" height="880" loading="lazy" decoding="async" draggable="false">
+          </button></li>
+          <li><button class="shot" type="button" data-full="gallery/p22.webp" data-i="7" style="--k:7" aria-label="View photo: Golden Buddha in an alcove of a white stupa">
+            <img src="gallery/thumbs/p22.webp" alt="Golden Buddha in an alcove of a white stupa" width="880" height="1100" loading="lazy" decoding="async" draggable="false">
+          </button></li>
+          <li><button class="shot" type="button" data-full="gallery/p26.webp" data-i="8" style="--k:8" aria-label="View photo: White peace pagoda against a deep blue sky">
+            <img src="gallery/thumbs/p26.webp" alt="White peace pagoda against a deep blue sky" width="880" height="1100" loading="lazy" decoding="async" draggable="false">
+          </button></li>
+          <li><button class="shot" type="button" data-full="gallery/p28.webp" data-i="9" style="--k:9" aria-label="View photo: Giant seated Buddha silhouetted against the sun">
+            <img src="gallery/thumbs/p28.webp" alt="Giant seated Buddha silhouetted against the sun" width="1100" height="826" loading="lazy" decoding="async" draggable="false">
+          </button></li>
+          <li><button class="shot" type="button" data-full="gallery/p24.webp" data-i="10" style="--k:10" aria-label="View photo: Aerial view of Colombo with a lake winding through">
+            <img src="gallery/thumbs/p24.webp" alt="Aerial view of Colombo with a lake winding through" width="1100" height="826" loading="lazy" decoding="async" draggable="false">
+          </button></li>
+          <li><button class="shot" type="button" data-full="gallery/p29.webp" data-i="11" style="--k:11" aria-label="View photo: Colombo skyline seen from a bridge over the water">
+            <img src="gallery/thumbs/p29.webp" alt="Colombo skyline seen from a bridge over the water" width="1100" height="880" loading="lazy" decoding="async" draggable="false">
+          </button></li>
+          <li><button class="shot" type="button" data-full="gallery/p25.webp" data-i="12" style="--k:12" aria-label="View photo: Lotus Tower rising into a blue sky">
+            <img src="gallery/thumbs/p25.webp" alt="Lotus Tower rising into a blue sky" width="826" height="1100" loading="lazy" decoding="async" draggable="false">
+          </button></li>
+          <li><button class="shot" type="button" data-full="gallery/p19.webp" data-i="13" style="--k:13" aria-label="View photo: Glass tower photographed from below">
+            <img src="gallery/thumbs/p19.webp" alt="Glass tower photographed from below" width="826" height="1100" loading="lazy" decoding="async" draggable="false">
+          </button></li>
+          <li><button class="shot" type="button" data-full="gallery/p21.webp" data-i="14" style="--k:14" aria-label="View photo: Old clock tower with a flag on a sunny day">
+            <img src="gallery/thumbs/p21.webp" alt="Old clock tower with a flag on a sunny day" width="826" height="1100" loading="lazy" decoding="async" draggable="false">
+          </button></li>
+          <li><button class="shot" type="button" data-full="gallery/p34.webp" data-i="15" style="--k:15" aria-label="View photo: Stone fort bastion under a blue sky">
+            <img src="gallery/thumbs/p34.webp" alt="Stone fort bastion under a blue sky" width="826" height="1100" loading="lazy" decoding="async" draggable="false">
+          </button></li>
+          <li><button class="shot" type="button" data-full="gallery/p33.webp" data-i="16" style="--k:16" aria-label="View photo: Twisting tower lit up at night">
+            <img src="gallery/thumbs/p33.webp" alt="Twisting tower lit up at night" width="1100" height="826" loading="lazy" decoding="async" draggable="false">
+          </button></li>
+          <li><button class="shot" type="button" data-full="gallery/p45.webp" data-i="17" style="--k:17" aria-label="View photo: Green valley view from a hilltop">
+            <img src="gallery/thumbs/p45.webp" alt="Green valley view from a hilltop" width="1100" height="826" loading="lazy" decoding="async" draggable="false">
+          </button></li>
+          <li><button class="shot" type="button" data-full="gallery/p46.webp" data-i="18" style="--k:18" aria-label="View photo: Hikers under tall trees with mountains behind">
+            <img src="gallery/thumbs/p46.webp" alt="Hikers under tall trees with mountains behind" width="1100" height="826" loading="lazy" decoding="async" draggable="false">
+          </button></li>
+          <li><button class="shot" type="button" data-full="gallery/p14.webp" data-i="19" style="--k:19" aria-label="View photo: Rock fortress reflected in a still pond">
+            <img src="gallery/thumbs/p14.webp" alt="Rock fortress reflected in a still pond" width="826" height="1100" loading="lazy" decoding="async" draggable="false">
+          </button></li>
+          <li><button class="shot" type="button" data-full="gallery/p64.webp" data-i="20" style="--k:20" aria-label="View photo: Pyramid-shaped mountain peak above the forest">
+            <img src="gallery/thumbs/p64.webp" alt="Pyramid-shaped mountain peak above the forest" width="826" height="1100" loading="lazy" decoding="async" draggable="false">
+          </button></li>
+          <li><button class="shot" type="button" data-full="gallery/p61.webp" data-i="21" style="--k:21" aria-label="View photo: Rocky beach with turquoise water and palm trees under a blue sky">
+            <img src="gallery/thumbs/p61.webp" alt="Rocky beach with turquoise water and palm trees under a blue sky" width="1100" height="826" loading="lazy" decoding="async" draggable="false">
+          </button></li>
+          <li><button class="shot" type="button" data-full="gallery/p65.webp" data-i="22" style="--k:22" aria-label="View photo: Holding a green mug over tea fields">
+            <img src="gallery/thumbs/p65.webp" alt="Holding a green mug over tea fields" width="826" height="1100" loading="lazy" decoding="async" draggable="false">
+          </button></li>
+          <li><button class="shot" type="button" data-full="gallery/p39.webp" data-i="23" style="--k:23" aria-label="View photo: White lotus flower held in hand">
+            <img src="gallery/thumbs/p39.webp" alt="White lotus flower held in hand" width="880" height="1100" loading="lazy" decoding="async" draggable="false">
+          </button></li>
+          <li><button class="shot" type="button" data-full="gallery/p38.webp" data-i="24" style="--k:24" aria-label="View photo: Silhouette of a person watching the sunset over the sea">
+            <img src="gallery/thumbs/p38.webp" alt="Silhouette of a person watching the sunset over the sea" width="826" height="1100" loading="lazy" decoding="async" draggable="false">
+          </button></li>
+          <li><button class="shot" type="button" data-full="gallery/p37.webp" data-i="25" style="--k:25" aria-label="View photo: Sun setting over the ocean">
+            <img src="gallery/thumbs/p37.webp" alt="Sun setting over the ocean" width="1100" height="826" loading="lazy" decoding="async" draggable="false">
+          </button></li>
+          <li><button class="shot" type="button" data-full="gallery/p51.webp" data-i="26" style="--k:26" aria-label="View photo: Fire dancers at a night perahera with a decorated elephant">
+            <img src="gallery/thumbs/p51.webp" alt="Fire dancers at a night perahera with a decorated elephant" width="882" height="1100" loading="lazy" decoding="async" draggable="false">
+          </button></li>
+          <li><button class="shot" type="button" data-full="gallery/p66.webp" data-i="27" style="--k:27" aria-label="View photo: Young elephant walking on sandy ground">
+            <img src="gallery/thumbs/p66.webp" alt="Young elephant walking on sandy ground" width="882" height="1100" loading="lazy" decoding="async" draggable="false">
+          </button></li>
+          <li><button class="shot" type="button" data-full="gallery/p63.webp" data-i="28" style="--k:28" aria-label="View photo: Three puppies sitting on a red floor">
+            <img src="gallery/thumbs/p63.webp" alt="Three puppies sitting on a red floor" width="880" height="1100" loading="lazy" decoding="async" draggable="false">
+          </button></li>
+          <li><button class="shot" type="button" data-full="gallery/p60.webp" data-i="29" style="--k:29" aria-label="View photo: Puppy resting on a red floor">
+            <img src="gallery/thumbs/p60.webp" alt="Puppy resting on a red floor" width="880" height="1100" loading="lazy" decoding="async" draggable="false">
+          </button></li>
+      </ul>
+      </div>
+    </section>
+
+    <!-- Photo viewer (filled in by main.js) -->
+    <div class="viewer" id="viewer" role="dialog" aria-modal="true" aria-label="Photo viewer" hidden>
+      <div class="viewer-backdrop"></div>
+      <div class="viewer-frame"><img class="viewer-img" alt=""></div>
+      <button class="viewer-btn viewer-close" type="button" aria-label="Close">×</button>
+      <button class="viewer-btn viewer-prev" type="button" aria-label="Previous photo">‹</button>
+      <button class="viewer-btn viewer-next" type="button" aria-label="Next photo">›</button>
+      <p class="viewer-count" aria-live="polite"></p>
+    </div>
+
     <!-- CONTACT -->
     <section id="contact" class="panel">
       <div class="side left reveal">
-        <p class="eyebrow">05 — Contact</p>
+        <p class="eyebrow">06 — Contact</p>
         <h2>Let's connect</h2>
       </div>
       <div class="side right reveal">
@@ -380,7 +496,7 @@
 
   <footer>© <span id="year"></span> Isuru Anjana</footer>
 
-  <script src="main.js?v=12"></script>
-  <script src="fx.js?v=2"></script>
+  <script src="main.js?v=35"></script>
+  <script src="fx.js?v=6"></script>
 </body>
 </html>

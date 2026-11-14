@@ -7,7 +7,8 @@
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+  // Soft glows don't need full resolution; this keeps the canvas cheap
+  const dpr = Math.min(window.devicePixelRatio || 1, 1.25);
 
   const ARC = '150, 210, 255';     // electric blue
   const CORE = '235, 248, 255';    // white-hot core
@@ -144,32 +145,42 @@
     const n = mobile ? 6 : 12;
     for (let i = 0; i < n; i++) traces.push(makeTrace(zone()));
     pulses = traces.map(t => ({ t, d: rand(0, t.total), v: rand(60, 140) }));
+    buildTraceLayer();
+  }
+
+  // ---------- Cached drawings (made once, stamped every frame) ----------
+  const sprite = (r, stops) => {
+    const c = document.createElement('canvas'); c.width = c.height = r * 2;
+    const g = c.getContext('2d'), gr = g.createRadialGradient(r, r, 0, r, r, r);
+    stops.forEach(([o, col]) => gr.addColorStop(o, col));
+    g.fillStyle = gr; g.fillRect(0, 0, r * 2, r * 2);
+    return c;
+  };
+  const PULSE = sprite(6, [[0, 'rgba(' + CORE + ',0.85)'], [0.3, 'rgba(' + ARC + ',0.45)'], [1, 'rgba(' + ARC + ',0)']]);
+  const GLOW = sprite(40, [[0, 'rgba(' + ARC + ',0.35)'], [1, 'rgba(' + ARC + ',0)']]);
+  let traceLayer = null;
+  function buildTraceLayer() {
+    traceLayer = document.createElement('canvas');
+    traceLayer.width = canvas.width; traceLayer.height = canvas.height;
+    const g = traceLayer.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    for (const t of traces) {
+      g.strokeStyle = 'rgba(' + ARC + ', 0.07)'; g.lineWidth = 1;
+      g.beginPath(); t.pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.stroke();
+      g.fillStyle = 'rgba(' + ARC + ', 0.12)';
+      for (const p of [t.pts[0], t.pts[t.pts.length - 1]]) { g.beginPath(); g.arc(p[0], p[1], 1.5, 0, Math.PI * 2); g.fill(); }
+    }
   }
 
   // ---------- Draw ----------
-  function drawTraces(time) {
-    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    for (const t of traces) {
-      ctx.strokeStyle = 'rgba(' + ARC + ', 0.07)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      t.pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
-      ctx.stroke();
-      // solder pads at the ends
-      ctx.fillStyle = 'rgba(' + ARC + ', 0.12)';
-      for (const p of [t.pts[0], t.pts[t.pts.length - 1]]) {
-        ctx.beginPath(); ctx.arc(p[0], p[1], 1.5, 0, Math.PI * 2); ctx.fill();
-      }
+  function drawTraces() {
+    if (traceLayer) {                                   // static traces: one blit
+      ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(traceLayer, 0, 0); ctx.restore();
     }
-    // travelling current pulses
-    for (const p of pulses) {
+    for (const p of pulses) {                           // travelling current pulses
       const [x, y] = pointOn(p.t, p.d);
-      const g = ctx.createRadialGradient(x, y, 0, x, y, 6);
-      g.addColorStop(0, 'rgba(' + CORE + ', 0.85)');
-      g.addColorStop(0.3, 'rgba(' + ARC + ', 0.45)');
-      g.addColorStop(1, 'rgba(' + ARC + ', 0)');
-      ctx.fillStyle = g;
-      ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.drawImage(PULSE, x - 6, y - 6);
     }
   }
 
@@ -190,12 +201,10 @@
         ctx.lineWidth = 1.2 * w; ctx.strokeStyle = 'rgba(' + CORE + ',' + (0.95 * alpha) + ')'; strokePath(p);
       }
       // glow at both electrodes
-      for (const [x, y] of [[a.x1, a.y1], [a.x2, a.y2]]) {
-        const g = ctx.createRadialGradient(x, y, 0, x, y, 40);
-        g.addColorStop(0, 'rgba(' + ARC + ',' + (0.35 * alpha) + ')');
-        g.addColorStop(1, 'rgba(' + ARC + ',0)');
-        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 40, 0, Math.PI * 2); ctx.fill();
-      }
+      ctx.globalAlpha = Math.max(0, alpha);
+      ctx.drawImage(GLOW, a.x1 - 40, a.y1 - 40);
+      ctx.drawImage(GLOW, a.x2 - 40, a.y2 - 40);
+      ctx.globalAlpha = 1;
     }
   }
 
@@ -210,10 +219,16 @@
 
   // ---------- Loop ----------
   let last = performance.now(), running = true;
+  const FRAME = 1000 / 30;                 // 30 fps is plenty for glows and sparks
+  const viewerEl = document.getElementById('viewer');
+  const compact = (arr, keep) => { let n = 0; for (const x of arr) if (keep(x)) arr[n++] = x; arr.length = n; };
 
   function step(now) {
     if (!running) return;
-    const dt = Math.min((now - last) / 1000, 0.05);
+    requestAnimationFrame(step);
+    if (now - last < FRAME - 1) return;
+    if (viewerEl && !viewerEl.hidden) { last = now; return; }   // covered by the photo viewer
+    const dt = Math.min((now - last) / 1000, 0.08);
     last = now;
 
     // scroll speed makes the circuit "busier"
@@ -229,10 +244,10 @@
       spawnArc();
       nextArc = now + rand(1400, 3800) * (1 - scrollBoost * 0.7);
     }
-    if (Math.random() < (mobile ? 0.04 : 0.08) + scrollBoost * 0.2) ember();
+    if (Math.random() < (mobile ? 0.06 : 0.12) + scrollBoost * 0.3) ember();   // per 30 fps frame
 
     for (const a of arcs) a.life += dt;
-    arcs = arcs.filter(a => a.life < a.max);
+    compact(arcs, a => a.life < a.max);
 
     for (const s of sparks) {
       s.px = s.x; s.py = s.y;
@@ -240,8 +255,8 @@
       s.x += s.vx * dt; s.y += s.vy * dt;
       s.life += dt;
     }
-    sparks = sparks.filter(s => s.life < s.max && s.y < H + 20);
-    if (sparks.length > 400) sparks.splice(0, sparks.length - 400);
+    compact(sparks, s => s.life < s.max && s.y < H + 20);
+    if (sparks.length > 250) sparks.splice(0, sparks.length - 250);
 
     ctx.clearRect(0, 0, W, H);
     ctx.globalCompositeOperation = 'lighter';
@@ -249,13 +264,11 @@
     drawArcs();
     drawSparks();
     ctx.globalCompositeOperation = 'source-over';
-
-    requestAnimationFrame(step);
   }
 
   // Tap / click anywhere for a small spark burst (not on links or cards)
   addEventListener('pointerdown', e => {
-    if (e.target.closest('a, button, .flip, iframe')) return;
+    if (e.target.closest('a, button, .flip, iframe, .viewer')) return;
     burst(e.clientX, e.clientY, 18);
   });
 
@@ -274,4 +287,7 @@
     return;
   }
   requestAnimationFrame(step);
+
+  // Let the page fire arcs and sparks (used by the title hover in main.js)
+  window.siteFx = { arc: spawnArc, sparks: burst };
 })();
