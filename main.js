@@ -360,7 +360,7 @@
     const count = viewer.querySelector('.viewer-count');
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const DUR = reduce ? 0 : 520, EASE = 'cubic-bezier(.2, .8, .2, 1)';
-    let cur = -1, busy = false, anim = null;
+    let cur = -1, busy = false, anim = null, pushed = false;
 
     const thumbOf = i => shots[i].querySelector('img');
     function finalBox(i) {
@@ -408,6 +408,9 @@
       anim.onfinish = () => { busy = false; shine(); };
       loadFull(i);
       viewer.querySelector('.viewer-close').focus({ preventScroll: true });
+      // Add a history entry so the phone's Back button closes the photo
+      // (returning to the collage) instead of leaving the site
+      if (!pushed) { history.pushState({ photoViewer: true }, ''); pushed = true; }
     }
 
     function close() {
@@ -469,14 +472,26 @@
     new IntersectionObserver((es, o) => {
       if (es[0].isIntersecting) { collage.classList.add('glint'); o.disconnect(); }
     }, { threshold: 0.25 }).observe(collage);
-    viewer.querySelector('.viewer-backdrop').addEventListener('click', close);
-    frame.addEventListener('click', close);
-    viewer.querySelector('.viewer-close').addEventListener('click', close);
+    // Closing from the page (x, backdrop, photo, Esc) steps back through the
+    // history entry we added; the Back button does the same thing directly.
+    const requestClose = () => {
+      if (cur < 0) return;
+      if (pushed) history.back(); else close();
+    };
+    addEventListener('popstate', () => {
+      if (!pushed) return;
+      pushed = false;
+      if (cur < 0) return;
+      if (busy) setTimeout(close, DUR + 30); else close();
+    });
+    viewer.querySelector('.viewer-backdrop').addEventListener('click', requestClose);
+    frame.addEventListener('click', requestClose);
+    viewer.querySelector('.viewer-close').addEventListener('click', requestClose);
     viewer.querySelector('.viewer-prev').addEventListener('click', () => go(-1));
     viewer.querySelector('.viewer-next').addEventListener('click', () => go(1));
     addEventListener('keydown', e => {
       if (cur < 0) return;
-      if (e.key === 'Escape') close();
+      if (e.key === 'Escape') requestClose();
       else if (e.key === 'ArrowRight') go(1);
       else if (e.key === 'ArrowLeft') go(-1);
     });
