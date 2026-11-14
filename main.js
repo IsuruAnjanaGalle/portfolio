@@ -37,11 +37,15 @@
       const img = new Image();
       img.decoding = 'async';
       img.onload = () => {
-        frames[i] = img;
-        status[i] = 2;
-        loaded++;
-        if (!drawnOnce || Math.abs(i - current) < 1.5) draw(current);
-        res(img);
+        // Decode in the background first, so drawing it never stalls a frame
+        (img.decode ? img.decode() : Promise.resolve()).catch(() => {}).then(() => {
+          frames[i] = img;
+          status[i] = 2;
+          loaded++;
+          if (!drawnOnce || Math.abs(i - current) < 3) draw(current);
+          onFrameReady();
+          res(img);
+        });
       };
       img.onerror = () => {
         status[i] = 0; // allow retry
@@ -65,6 +69,18 @@
     }, 150);
   }
 
+  // The loading screen stays until the first stretch of frames (what the
+  // first scroll needs) is downloaded and decoded, but never more than
+  // LOADER_MAX ms. Dismissing it with only one frame ready made the first
+  // scroll stutter while 200 images streamed in underneath.
+  const READY_FRAMES = 40, LOADER_MAX = 2600;
+  function onFrameReady() {
+    if (loaderDismissed) return;
+    let n = 0;
+    while (n < READY_FRAMES && status[n] === 2) n++;
+    updateLoaderProgress((n / READY_FRAMES) * 100);
+  }
+
   function updateLoaderProgress(pct) {
     if (loaderDismissed) return;
     const clamped = Math.min(Math.max(pct, 0), 100);
@@ -74,10 +90,14 @@
   }
 
   // Concurrency-controlled proximity-aware stream manager
-  const CONCURRENCY = 4;
+  const CONCURRENCY = 6;
+  const AHEAD = 36;            // frames just ahead of the scroll position come first
   let activeWorkers = 0;
 
   function getNextFrameIndex() {
+    // 0. The frames right around / ahead of where the visitor is scrolling
+    const from = Math.max(0, Math.floor(target) - 2);
+    for (let i = from; i < Math.min(FRAME_COUNT, from + AHEAD); i++) if (status[i] === 0) return i;
     // 1. Check if any keyframes are not yet loaded/requested
     let bestKeyframe = -1, minKeyDist = Infinity;
     for (let k = 0; k < FRAME_COUNT; k += KEYFRAME_STEP) {
@@ -124,29 +144,13 @@
   loadFrame(0).then(() => {
     resize();
     draw(current);
-    updateLoaderProgress(60);
 
-    // Load initial frames for smooth top-of-page scrubbing
-    let initialCount = 0;
-    const initialTarget = Math.min(6, FRAME_COUNT);
-    for (let i = 1; i < initialTarget; i++) {
-      loadFrame(i).then(() => {
-        initialCount++;
-        updateLoaderProgress(60 + (initialCount / (initialTarget - 1)) * 40);
-        if (initialCount >= 2) dismissLoader();
-      });
-    }
-
-    // Defer background frame stream until main thread completes initial layout & paint
-    if ('requestIdleCallback' in window) {
-      requestIdleCallback(() => pumpQueue(), { timeout: 1200 });
-    } else {
-      setTimeout(pumpQueue, 250);
-    }
+    onFrameReady();
+    pumpQueue();               // stream the rest straight away, in scroll order
   });
 
-  // Guarantee loader dismissal in under 400ms even on slow networks
-  setTimeout(dismissLoader, 400);
+  // Never keep the loading screen up for long, even on slow networks
+  setTimeout(dismissLoader, LOADER_MAX);
 
   // ---------- Layout: fit without cropping the person ----------
   let cw = 0, ch = 0, box = { x: 0, y: 0, w: 0, h: 0 };
@@ -221,15 +225,22 @@
 
   function draw(pos) {
     const i = Math.floor(pos);
-    const t = pos - i;
-    const a = nearestLoaded(i);
+    let t = pos - i;
+    let a = frames[i], b = i + 1 < FRAME_COUNT ? frames[i + 1] : null;
+    if (!a || (!b && i + 1 < FRAME_COUNT)) {
+      // A frame here isn't loaded yet: cross-fade between the nearest loaded
+      // frames on either side instead of jumping
+      let lo = i; while (lo >= 0 && !frames[lo]) lo--;
+      let hi = i + 1; while (hi < FRAME_COUNT && !frames[hi]) hi++;
+      if (lo >= 0 && hi < FRAME_COUNT) { a = frames[lo]; b = frames[hi]; t = (pos - lo) / (hi - lo); }
+      else { a = nearestLoaded(i); b = null; }
+    }
     if (!a || !cw) return;
     drawnOnce = true;
     ctx.globalAlpha = 1;
     ctx.fillStyle = BG;
     ctx.fillRect(0, 0, cw, ch);
     ctx.drawImage(a, box.x, box.y, box.w, box.h);
-    const b = i + 1 < FRAME_COUNT ? frames[i + 1] : null;
     if (b && t > 0.01) {
       ctx.globalAlpha = t;
       ctx.drawImage(b, box.x, box.y, box.w, box.h);
@@ -824,6 +835,19 @@
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); card.classList.toggle('flipped'); }
     });
   });
+
+  // ---------- Pre-render lower sections while idle ----------
+  // Sections below the fold skip layout until they're near the screen
+  // (content-visibility). That made the first scroll do all that work at
+  // once. Lay them out one at a time in idle moments instead.
+  (() => {
+    const lazy = [...document.querySelectorAll('main > section')]
+      .filter(sec => getComputedStyle(sec).contentVisibility === 'auto');
+    if (!lazy.length) return;
+    const idle = cb => ('requestIdleCallback' in window) ? requestIdleCallback(cb, { timeout: 1500 }) : setTimeout(cb, 120);
+    const next = () => { const sec = lazy.shift(); if (!sec) return; sec.style.contentVisibility = 'visible'; idle(next); };
+    addEventListener('load', () => idle(next));
+  })();
 
   // ---------- Reveal text ----------
   // Reveal as soon as an element's top is a little way into the screen.
